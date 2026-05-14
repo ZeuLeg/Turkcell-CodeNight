@@ -1,0 +1,15 @@
+{
+  "name": "telcoguard",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:simulator": "npm run dev -w @telcoguard/simulator"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
