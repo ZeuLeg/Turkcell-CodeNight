@@ -3,6 +3,8 @@
 ## 🚀 Proje Hakkında
 
 TelcoGuard, Turkcell Şebeke Operasyon Merkezi (NOC) için geliştirilmiş gerçek zamanlı şebeke izleme ve anomali tespit platformudur. Baz istasyonlarından akan telemetre verilerini simüle eder, işler, anomali kurallarına göre analiz ederek alarmlar üretir ve canlı olarak bir dashboard sistemine aktarır.
+<img width="1635" height="884" alt="image" src="https://github.com/user-attachments/assets/4f70d20f-dd61-467a-83ff-52d61cd33769" />
+
 
 ## 🛠 Teknoloji Yığını (Stack)
 
