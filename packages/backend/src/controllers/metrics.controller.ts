@@ -5,31 +5,32 @@ import { checkAnomalies } from '../services/anomaly/detector';
 
 export const insertMetric = async (req: Request, res: Response) => {
   try {
-    // 1. Tip Zorlaması (Type Casting) - Express'in string[] dönme ihtimalini eziyoruz
+    // Tip zorlaması: stationId'nin kesinlikle tekil bir string olduğunu belirtiyoruz
     const stationId = req.params.stationId as string;
 
-    // 2. Drizzle decimal kolonları için string, integer kolonları için number dönüşümü
-    const cpuUsage = String(req.body.cpuUsage);
-    const memoryUsage = String(req.body.memoryUsage);
-    const packetLoss = String(req.body.packetLoss);
-    const latency = String(req.body.latency);
-    const rssi = String(req.body.rssi);
-    const connectedUsers = Number(req.body.connectedUsers);
-
-    // TODO: Zod veya Joi ile request body validasyonu eklenecek (Vakit kalırsa)
-
-    const newMetric = await db.insert(metrics).values({
-      stationId,
+    const {
       cpuUsage,
       memoryUsage,
       packetLoss,
       latency,
       rssi,
-      connectedUsers,
+      connectedUsers
+    } = req.body;
+
+    const newMetric = await db.insert(metrics).values({
+      stationId,
+      cpuUsage: String(cpuUsage), // Decimal kolonlar string bekler
+      memoryUsage: String(memoryUsage),
+      packetLoss: String(packetLoss),
+      latency: String(latency),
+      rssi: String(rssi),
+      connectedUsers: Number(connectedUsers), // Integer kolon number bekler
     }).returning();
 
-    // Veri DB'ye yazıldıktan sonra anomali kontrolü yap (Asenkron)
-    checkAnomalies(newMetric[0]);
+    // Veri yazıldıktan sonra motoru tetikle
+    if (newMetric[0]) {
+      checkAnomalies(newMetric[0]);
+    }
 
     res.status(201).json({ success: true, data: newMetric[0] });
   } catch (error) {
