@@ -36,8 +36,7 @@ export const metrics = pgTable('metrics', {
   connectedUsers: integer('connected_users').notNull(),
 }, (table) => {
   return {
-    // Performans için compound index (Önemli)
-    stationTimeIdx: index('idx_station_time').on(table.stationId, table.timestamp)
+    stationTimestampIdx: index('station_timestamp_idx').on(table.stationId, table.timestamp),
   };
 });
 

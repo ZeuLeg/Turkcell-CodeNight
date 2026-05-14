@@ -8,5 +8,6 @@ router.post('/:action', controlSimulator);
 
 // Endpoint: POST /api/v1/simulator/inject
 router.post('/inject', injectAnomaly);
+router.post('/inject-anomaly', injectAnomaly);
 
 export default router;

@@ -38,3 +38,15 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'Sunucu hatası' });
   }
 };
+import { users } from '../db/schema';
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { email, password, role } = req.body;
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await db.insert(users).values({ email, passwordHash: hashedPassword, role: role || 'NOC' }).returning();
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign({ id: newUser[0].id, role: newUser[0].role }, process.env.JWT_SECRET || 'changeme', { expiresIn: '12h' });
+    res.status(201).json({ success: true, token, data: newUser[0] });
+  } catch (error) { res.status(500).json({ success: false }); }
+};

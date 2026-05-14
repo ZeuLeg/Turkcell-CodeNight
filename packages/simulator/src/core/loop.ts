@@ -17,7 +17,7 @@ async function runTick(): Promise<void> {
       if (anomaly) {
         metric = applyAnomaly(anomaly, metric);
       }
-      await sendMetric(station.id, metric);
+      await sendMetric(station.code, metric);
     })
   );
 }

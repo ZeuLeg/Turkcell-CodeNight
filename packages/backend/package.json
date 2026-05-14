@@ -4,10 +4,14 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
     "test": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "push": "drizzle-kit push --force",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "seed": "tsx src/db/seeds/index.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -15,7 +19,6 @@
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
-    "gel": "^2.2.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0"
@@ -27,7 +30,9 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.8.0",
     "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
     "ts-node-dev": "^2.0.0",
+    "tsx": "^4.22.0",
     "typescript": "^6.0.3"
   }
 }

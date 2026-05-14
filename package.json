@@ -10,16 +10,18 @@
     "dev:backend": "npm run dev -w @telcoguard/backend",
     "dev:frontend": "npm run dev -w @telcoguard/frontend",
     "dev:simulator": "npm run dev -w @telcoguard/simulator",
-    "dev": "concurrently -n \"BACKEND,FRONTEND,SIM\" -c \"blue,green,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:simulator\"",
+    "dev": "concurrently -n \"BACKEND,SIM\" -c \"blue,magenta\" \"npm run dev:backend\" \"npm run dev:simulator\"",
     "db:generate": "npm run generate -w @telcoguard/backend",
     "db:push": "npm run push -w @telcoguard/backend",
     "db:seed": "npm run seed -w @telcoguard/backend"
   },
   "devDependencies": {
+    "@types/supertest": "^7.2.0",
     "concurrently": "^8.2.2",
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "3.8.3",
+    "supertest": "^7.2.2",
     "typescript": "^5.4.0"
   },
   "dependencies": {
