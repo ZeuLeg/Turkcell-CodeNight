@@ -1,116 +1,190 @@
 import React, { useState } from 'react';
+import { X, AlertOctagon, AlertTriangle, Clock, User, CheckCircle2, Wrench } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface AlarmDetailModalProps {
-  alarm: any; // Tip tanımlamaları yapılınca burası güncellenir
+  alarm: any;
   onClose: () => void;
   onResolve: (alarmId: string, resolutionNote: string) => void;
+  onAcknowledge?: (alarmId: string) => void;
+  onStartProgress?: (alarmId: string, assignedTo: string) => void;
 }
 
-export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({ alarm, onClose, onResolve }) => {
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  OPEN: { label: 'Açık', className: 'bg-red-100 text-red-800' },
+  ACKNOWLEDGED: { label: 'Kabul Edildi', className: 'bg-amber-100 text-amber-800' },
+  IN_PROGRESS: { label: 'Müdahale Ediliyor', className: 'bg-blue-100 text-blue-800' },
+  RESOLVED: { label: 'Çözüldü', className: 'bg-emerald-100 text-emerald-800' },
+};
+
+const METRIC_LABELS: Record<string, string> = {
+  cpuUsage: 'CPU Kullanımı',
+  memoryUsage: 'Bellek Kullanımı',
+  packetLoss: 'Paket Kaybı',
+  latency: 'Gecikme',
+  rssi: 'Sinyal Gücü (RSSI)',
+  connectedUsers: 'Bağlı Kullanıcı Sayısı',
+};
+
+const MOCK_ENGINEERS = [
+  { id: 'eng1', name: 'Ahmet Yılmaz (Saha Mühendisi)' },
+  { id: 'eng2', name: 'Ayşe Demir (NOC Operatörü)' },
+  { id: 'eng3', name: 'Mehmet Çelik (Saha Mühendisi)' },
+];
+
+export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({
+  alarm,
+  onClose,
+  onResolve,
+  onAcknowledge,
+  onStartProgress,
+}) => {
   const [resolutionNote, setResolutionNote] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
 
   if (!alarm) return null;
 
+  const statusCfg = STATUS_CONFIG[alarm.status] ?? { label: alarm.status, className: 'bg-slate-100 text-slate-700' };
+  const SeverityIcon = alarm.severity === 'CRITICAL' ? AlertOctagon : AlertTriangle;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-800">Alarm Detayı</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">&times;</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <SeverityIcon
+              className={`h-5 w-5 ${alarm.severity === 'CRITICAL' ? 'text-red-600' : 'text-amber-500'}`}
+            />
+            <h2 className="text-base font-semibold text-slate-900">Alarm Detayı</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        
-        <div className="p-4 overflow-y-auto space-y-4">
+
+        {/* Body */}
+        <div className="p-6 overflow-y-auto space-y-5">
+
+          {/* Status + Severity row */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusCfg.className}`}>
+              {statusCfg.label}
+            </span>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${alarm.severity === 'CRITICAL' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
+              {alarm.severity === 'CRITICAL' ? 'Kritik' : 'Uyarı'}
+            </span>
+            {alarm.assignedTo && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                <User className="h-3 w-3" />
+                {alarm.assignedTo}
+              </span>
+            )}
+          </div>
+
+          {/* Details grid */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">Durum</p>
-              <p className={`font-medium ${alarm.status === 'OPEN' ? 'text-red-600' : 'text-green-600'}`}>
-                {alarm.status === 'OPEN' ? 'Açık' : 'Çözüldü'}
+              <p className="text-xs font-medium text-slate-500 mb-1">İstasyon</p>
+              <p className="font-mono text-sm font-semibold text-slate-900">{alarm.stationId}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-1">Metrik</p>
+              <p className="text-sm font-medium text-slate-900">{METRIC_LABELS[alarm.metricName] ?? alarm.metricName}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Oluşturma Zamanı
+              </p>
+              <p className="text-sm text-slate-700">
+                {new Date(alarm.createdAt).toLocaleString('tr-TR')}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Şiddet</p>
-              <p className={`font-medium ${alarm.severity === 'CRITICAL' ? 'text-red-700' : 'text-orange-500'}`}>
-                {alarm.severity === 'CRITICAL' ? 'Kritik' : 'Uyarı'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Metrik</p>
-              <p className="font-medium">{alarm.metricName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Tarih</p>
-              <p className="font-medium">{new Date(alarm.createdAt).toLocaleString()}</p>
-            </div>
           </div>
 
+          {/* Message */}
           <div>
-            <p className="text-sm text-gray-500 mb-1">İstasyon</p>
-            {/* React Router link eklenebilir: <Link to={`/stations/${alarm.stationId}`}> */}
-            <a href={`/stations/${alarm.stationId}`} className="text-blue-600 hover:underline font-medium">
-              İstasyon detayına git (ID: {alarm.stationId})
-            </a>
+            <p className="text-xs font-medium text-slate-500 mb-2">Alarm Açıklaması</p>
+            <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+              <p className="text-sm text-slate-700">{alarm.message}</p>
+            </div>
           </div>
 
-          <div>
-            <p className="text-sm text-gray-500 mb-1">Açıklama</p>
-            <p className="bg-gray-50 p-3 rounded-md text-sm border border-gray-200">{alarm.message}</p>
-          </div>
+          {/* Action area — depends on status */}
+          {(alarm.status === 'OPEN' || alarm.status === 'ACKNOWLEDGED') && (
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-2">Saha Mühendisine Ata</p>
+              <select
+                className="w-full h-9 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+              >
+                <option value="">Kişi seçin...</option>
+                {MOCK_ENGINEERS.map((eng) => (
+                  <option key={eng.id} value={eng.name}>{eng.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {alarm.status === 'OPEN' && (
-            <>
-              <div>
-                <label className="text-sm text-gray-700 block mb-1">Atama Yap (Assign)</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-md p-2"
-                  value={assignedTo}
-                  onChange={(e) => setAssignedTo(e.target.value)}
-                >
-                  <option value="">Seçiniz...</option>
-                  <option value="user1">Ahmet Yılmaz (NOC)</option>
-                  <option value="user2">Ayşe Demir (Mühendis)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-700 block mb-1">Çözüm Notu</label>
-                <textarea 
-                  className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                  rows={3}
-                  placeholder="Bu alarm neden oluştu ve nasıl çözüldü?"
-                  value={resolutionNote}
-                  onChange={(e) => setResolutionNote(e.target.value)}
-                />
-              </div>
-            </>
+          {(alarm.status === 'OPEN' || alarm.status === 'ACKNOWLEDGED' || alarm.status === 'IN_PROGRESS') && (
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-2">Çözüm Notu</p>
+              <textarea
+                className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-none"
+                rows={3}
+                placeholder="Bu alarm neden oluştu ve nasıl çözüldü? Açıklayın..."
+                value={resolutionNote}
+                onChange={(e) => setResolutionNote(e.target.value)}
+              />
+            </div>
           )}
 
           {alarm.status === 'RESOLVED' && alarm.resolutionNote && (
             <div>
-              <p className="text-sm text-gray-500 mb-1">Çözüm Notu</p>
-              <p className="bg-green-50 p-3 rounded-md text-sm border border-green-200 text-green-800">
-                {alarm.resolutionNote}
+              <p className="text-xs font-medium text-slate-500 mb-2 flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Çözüm Notu
               </p>
+              <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                <p className="text-sm text-emerald-800">{alarm.resolutionNote}</p>
+              </div>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-200 flex justify-between items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onClose}>
             Kapat
-          </button>
-          {alarm.status === 'OPEN' && (
-            <button 
-              onClick={() => onResolve(alarm.id, resolutionNote)}
-              disabled={!resolutionNote}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Çözüldü Olarak İşaretle
-            </button>
-          )}
+          </Button>
+          <div className="flex gap-2">
+            {alarm.status === 'OPEN' && onAcknowledge && (
+              <Button variant="secondary" size="sm" onClick={() => onAcknowledge(alarm.id)}>
+                Kabul Et
+              </Button>
+            )}
+            {alarm.status === 'ACKNOWLEDGED' && onStartProgress && (
+              <Button variant="secondary" size="sm" onClick={() => onStartProgress(alarm.id, assignedTo)}>
+                <Wrench className="h-3.5 w-3.5 mr-1.5" />
+                Müdahale Başlat
+              </Button>
+            )}
+            {alarm.status !== 'RESOLVED' && (
+              <Button
+                size="sm"
+                onClick={() => onResolve(alarm.id, resolutionNote)}
+                disabled={!resolutionNote.trim()}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                Çözüldü İşaretle
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

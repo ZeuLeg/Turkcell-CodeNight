@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SimulatorControls } from '../components/simulator/SimulatorControls';
 import { AnomalyInjector } from '../components/simulator/AnomalyInjector';
 import { ActiveAnomaliesList, ActiveAnomaly } from '../components/simulator/ActiveAnomaliesList';
+import { PageHeader } from '../components/ui/PageHeader';
 
 export const SimulatorPage: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -37,13 +38,11 @@ export const SimulatorPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Simülatör Yönetimi</h1>
-        <p className="text-gray-600 mt-1">
-          Ağınızdaki istasyon veri akışını simüle edin ve manuel olarak senaryoları tetikleyin.
-        </p>
-      </div>
+    <div className="flex flex-col space-y-6 h-full">
+      <PageHeader
+        title="Simülatör Yönetimi"
+        description="Ağınızdaki istasyon veri akışını simüle edin ve manuel olarak anomali senaryoları tetikleyin."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sol Sütun: Kontroller ve Liste */}

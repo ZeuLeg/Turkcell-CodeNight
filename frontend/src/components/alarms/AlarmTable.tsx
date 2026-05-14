@@ -5,13 +5,50 @@ import {
   flexRender,
   ColumnDef
 } from '@tanstack/react-table';
+import { BellOff } from 'lucide-react';
 
 interface AlarmTableProps {
   data: any[];
   onRowClick: (alarm: any) => void;
+  maxRows?: number;
 }
 
-export const AlarmTable: React.FC<AlarmTableProps> = ({ data, onRowClick }) => {
+const SEVERITY_STYLES: Record<string, string> = {
+  CRITICAL: 'bg-red-100 text-red-800 ring-1 ring-red-200',
+  WARNING: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
+};
+
+const SEVERITY_LABELS: Record<string, string> = {
+  CRITICAL: 'Kritik',
+  WARNING: 'Uyarı',
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  OPEN: 'bg-red-50 text-red-700 ring-1 ring-red-200',
+  ACKNOWLEDGED: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  IN_PROGRESS: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+  RESOLVED: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  OPEN: 'Açık',
+  ACKNOWLEDGED: 'Kabul Edildi',
+  IN_PROGRESS: 'Müdahale Ediliyor',
+  RESOLVED: 'Çözüldü',
+};
+
+const METRIC_LABELS: Record<string, string> = {
+  cpuUsage: 'CPU Kullanımı',
+  memoryUsage: 'Bellek',
+  packetLoss: 'Paket Kaybı',
+  latency: 'Gecikme',
+  rssi: 'Sinyal',
+  connectedUsers: 'Bağlı Kullanıcı',
+};
+
+export const AlarmTable: React.FC<AlarmTableProps> = ({ data, onRowClick, maxRows }) => {
+  const displayData = maxRows ? data.slice(0, maxRows) : data;
+
   const columns = React.useMemo<ColumnDef<any>[]>(
     () => [
       {
@@ -20,19 +57,33 @@ export const AlarmTable: React.FC<AlarmTableProps> = ({ data, onRowClick }) => {
         cell: (info) => {
           const val = info.getValue() as string;
           return (
-            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${val === 'CRITICAL' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}`}>
-              {val === 'CRITICAL' ? 'Kritik' : 'Uyarı'}
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${SEVERITY_STYLES[val] ?? 'bg-slate-100 text-slate-700'}`}>
+              {SEVERITY_LABELS[val] ?? val}
             </span>
           );
-        }
+        },
       },
       {
         accessorKey: 'stationId',
-        header: 'İstasyon ID',
+        header: 'İstasyon',
+        cell: (info) => (
+          <span className="font-mono text-sm font-medium text-slate-800">{info.getValue() as string}</span>
+        ),
       },
       {
         accessorKey: 'metricName',
         header: 'Metrik',
+        cell: (info) => {
+          const val = info.getValue() as string;
+          return <span className="text-sm text-slate-600">{METRIC_LABELS[val] ?? val}</span>;
+        },
+      },
+      {
+        accessorKey: 'message',
+        header: 'Mesaj',
+        cell: (info) => (
+          <span className="text-sm text-slate-600 line-clamp-1 max-w-xs">{info.getValue() as string}</span>
+        ),
       },
       {
         accessorKey: 'status',
@@ -40,68 +91,73 @@ export const AlarmTable: React.FC<AlarmTableProps> = ({ data, onRowClick }) => {
         cell: (info) => {
           const val = info.getValue() as string;
           return (
-            <span className={`font-medium ${val === 'OPEN' ? 'text-red-600' : 'text-green-600'}`}>
-              {val === 'OPEN' ? 'Açık' : 'Çözüldü'}
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLES[val] ?? 'bg-slate-100 text-slate-700'}`}>
+              {STATUS_LABELS[val] ?? val}
             </span>
           );
-        }
+        },
       },
       {
         accessorKey: 'createdAt',
         header: 'Tarih',
-        cell: (info) => new Date(info.getValue() as string).toLocaleString()
-      }
+        cell: (info) => (
+          <span className="text-xs text-slate-500 whitespace-nowrap">
+            {new Date(info.getValue() as string).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+          </span>
+        ),
+      },
     ],
     []
   );
 
   const table = useReactTable({
-    data,
+    data: displayData,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left text-gray-500">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-slate-50 border-b border-slate-200">
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
-                  <th key={header.id} className="px-6 py-3">
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
+                  <th
+                    key={header.id}
+                    className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider"
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
               </tr>
             ))}
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {table.getRowModel().rows.map(row => (
-              <tr 
-                key={row.id} 
+              <tr
+                key={row.id}
                 onClick={() => onRowClick(row.original)}
-                className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                className="hover:bg-slate-50 cursor-pointer transition-colors"
               >
                 {row.getVisibleCells().map(cell => (
-                  <td key={cell.id} className="px-6 py-4">
+                  <td key={cell.id} className="px-4 py-3">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
               </tr>
             ))}
-            {data.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                  Kayıtlı alarm bulunmuyor veya filtrelere uyan sonuç yok.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
+
+        {displayData.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+            <BellOff className="h-10 w-10 mb-3 opacity-40" />
+            <p className="text-sm font-medium">Gösterilecek alarm yok</p>
+            <p className="text-xs mt-1">Filtreleri değiştirerek tekrar deneyin</p>
+          </div>
+        )}
       </div>
     </div>
   );

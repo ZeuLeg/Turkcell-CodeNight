@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuthStore, AuthUser } from '@/store/auth.store';
 import {
   loginSchema,
   otpLoginSchema,
@@ -52,16 +52,27 @@ export default function LoginPage() {
     resolver: zodResolver(registerSchema),
   });
 
+  const MOCK_USERS: Record<string, AuthUser> = {
+    admin: { id: 1, name: 'Ahmet Yılmaz', email: 'admin@turkcell.com.tr', role: 'admin', roleLabel: 'Sistem Yöneticisi' },
+    manager: { id: 2, name: 'Fatma Kaya', email: 'manager@turkcell.com.tr', role: 'manager', roleLabel: 'Şebeke Yöneticisi' },
+    operator: { id: 3, name: 'Mehmet Çelik', email: 'operator@turkcell.com.tr', role: 'operator', roleLabel: 'NOC Operatörü' },
+  };
+
   const onLoginSuccess = () => {
     setIsLoading(true);
-    // Simulate API call
     setTimeout(() => {
       if (isMockMode) {
-        login('mock-jwt-token-12345');
+        login('mock-jwt-token-12345', MOCK_USERS.admin);
         navigate('/dashboard');
       }
       setIsLoading(false);
     }, 1000);
+  };
+
+  const quickLogin = (roleKey: keyof typeof MOCK_USERS) => {
+    const user = MOCK_USERS[roleKey];
+    login(`mock-jwt-${roleKey}`, user);
+    navigate('/dashboard');
   };
 
   const onRegisterSuccess = () => {
@@ -234,17 +245,41 @@ export default function LoginPage() {
           </Tabs>
 
           {isMockMode && (
-            <div className="mt-6 border-t border-slate-200 pt-4">
-              <div className="rounded-md bg-blue-50 p-4">
-                <div className="flex">
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">Mock Modu Aktif</h3>
-                    <div className="mt-2 text-sm text-blue-700">
-                      <p>Backend hazır olana kadar giriş/kayıt işlemleri simüle edilmektedir. Formu geçerli verilerle doldurup "Giriş Yap" butonuna basarak dashboard'a ilerleyebilirsiniz.</p>
-                    </div>
-                  </div>
+            <div className="mt-6 border-t border-slate-200 pt-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Demo — Hızlı Giriş</p>
+              <button
+                type="button"
+                onClick={() => quickLogin('admin')}
+                className="w-full flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-left hover:bg-red-100 transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-red-800">Sistem Yöneticisi</p>
+                  <p className="text-xs text-red-600 mt-0.5">Tüm sayfalar + Simülatör + Kullanıcı Yönetimi</p>
                 </div>
-              </div>
+                <ArrowRight className="h-4 w-4 text-red-500 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => quickLogin('manager')}
+                className="w-full flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-left hover:bg-blue-100 transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-blue-800">Şebeke Yöneticisi</p>
+                  <p className="text-xs text-blue-600 mt-0.5">Dashboard, Alarmlar, İstasyonlar, Bölge Özeti</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-blue-500 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => quickLogin('operator')}
+                className="w-full flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-left hover:bg-emerald-100 transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-emerald-800">NOC Operatörü</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Dashboard, Alarmlar, İstasyonlar</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-emerald-500 shrink-0" />
+              </button>
             </div>
           )}
         </div>

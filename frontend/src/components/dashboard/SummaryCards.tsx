@@ -29,20 +29,23 @@ export function SummaryCards() {
         title="Toplam İstasyon"
         value={stats.totalStations}
         icon={RadioTower}
-        colorClass="text-blue-500"
+        colorClass="text-blue-600"
+        bgClass="bg-blue-50"
       />
       <SummaryCard
         title="Aktif Alarmlar"
-        value={Math.max(0, stats.activeAlarms)} // prevent negative
+        value={Math.max(0, stats.activeAlarms)}
         icon={AlertTriangle}
-        colorClass="text-amber-500"
+        colorClass="text-amber-600"
+        bgClass="bg-amber-50"
         trend={{ value: 12, isPositive: false }}
       />
       <SummaryCard
         title="Kritik Alarmlar"
         value={Math.max(0, stats.criticalAlarms)}
         icon={AlertOctagon}
-        colorClass="text-red-500"
+        colorClass="text-red-600"
+        bgClass="bg-red-50"
         trend={{ value: 2, isPositive: false }}
       />
       <SummaryCard
@@ -50,6 +53,7 @@ export function SummaryCards() {
         value={stats.offlineStations}
         icon={WifiOff}
         colorClass="text-slate-500"
+        bgClass="bg-slate-100"
       />
     </div>
   );

@@ -27,14 +27,6 @@ export function UserTable({ users, onToggleStatus, onChangeRole }: UserTableProp
     }
   };
 
-  const getRoleLabel = (role: string) => {
-    switch(role) {
-      case 'admin': return 'Sistem Yöneticisi';
-      case 'editor': return 'Düzenleyici';
-      default: return 'Standart Kullanıcı';
-    }
-  };
-
   return (
     <div className="overflow-x-auto w-full">
       <table className="w-full text-sm text-left">
