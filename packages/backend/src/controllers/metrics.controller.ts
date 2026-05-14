@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { db } from '../config/db';
 import { metrics } from '../db/schema';
+import { checkAnomalies } from '../services/anomaly/detector';
 
 export const insertMetric = async (req: Request, res: Response) => {
   try {
@@ -29,6 +30,8 @@ export const insertMetric = async (req: Request, res: Response) => {
     // NOT: Anomali Tespit Motoru tetiklemesi buraya eklenecek!
     // checkAnomalies(newMetric[0]);
 
+    // YENİ EKLENEN KISIM: Veri DB'ye yazıldıktan sonra anomali kontrolü yap (Asenkron, requesti bekletmemek için await kullanmıyoruz)
+    checkAnomalies(newMetric[0]);
     res.status(201).json({ success: true, data: newMetric[0] });
   } catch (error) {
     console.error('Metric insertion error:', error);

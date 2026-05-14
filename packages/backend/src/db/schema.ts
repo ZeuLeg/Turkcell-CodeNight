@@ -2,6 +2,7 @@ import {
   pgTable, uuid, varchar, decimal, integer,
   timestamp, text, pgEnum, bigserial, index
 } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 // ENUM'lar (PDF Sayfa 8)
 export const stationTypeEnum = pgEnum('station_type', ['LTE', 'NR_5G']);
@@ -71,3 +72,11 @@ export const thresholdConfigs = pgTable('threshold_configs', {
   direction: varchar('direction', { length: 10 }).notNull(), // 'above' veya 'below'
   isActive: integer('is_active').default(1).notNull() // 1: Aktif, 0: Pasif
 });
+
+// ALARMLAR VE İSTASYONLAR ARASINDAKİ İLİŞKİ
+export const alarmsRelations = relations(alarms, ({ one }) => ({
+  station: one(stations, {
+    fields: [alarms.stationId],
+    references: [stations.id],
+  }),
+}));
