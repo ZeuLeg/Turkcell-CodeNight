@@ -1,17 +1,14 @@
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronRight, MapPin, RadioTower, HardDrive, Clock, Activity } from 'lucide-react';
 import { MetricChartsGrid } from '@/components/charts/MetricChartsGrid';
 import { AlarmTable } from '@/components/alarms/AlarmTable';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
-
-const MOCK_STATIONS: Record<string, any> = {
-  'BSC-001': { id: 'BSC-001', name: 'Levent-K1', code: 'BSC-001', region: 'Marmara', city: 'İstanbul', lat: 41.083, lng: 29.011, type: 'NR_5G', capacity: 1000, status: 'CRITICAL', lastSeen: '12 sn önce', uptime: '98.2%' },
-  'BSC-002': { id: 'BSC-002', name: 'Kadıköy-M3', code: 'BSC-002', region: 'Marmara', city: 'İstanbul', lat: 40.990, lng: 29.028, type: 'LTE', capacity: 800, status: 'WARNING', lastSeen: '8 sn önce', uptime: '99.1%' },
-  'BSC-003': { id: 'BSC-003', name: 'Taksim-A2', code: 'BSC-003', region: 'Marmara', city: 'İstanbul', lat: 41.036, lng: 28.985, type: 'NR_5G', capacity: 1200, status: 'ACTIVE', lastSeen: '5 sn önce', uptime: '99.8%' },
-  'BSC-004': { id: 'BSC-004', name: 'Beşiktaş-B1', code: 'BSC-004', region: 'Marmara', city: 'İstanbul', lat: 41.043, lng: 29.004, type: 'NR_5G', capacity: 900, status: 'ACTIVE', lastSeen: '6 sn önce', uptime: '99.5%' },
-  'BSC-005': { id: 'BSC-005', name: 'Üsküdar-U3', code: 'BSC-005', region: 'Marmara', city: 'İstanbul', lat: 41.024, lng: 29.013, type: 'LTE', capacity: 700, status: 'OFFLINE', lastSeen: '15 dk önce', uptime: '91.3%' },
-};
+import { stationsApi } from '@/api/stations.api';
+import { alarmsApi } from '@/api/alarms.api';
+import { Station } from '@/types/station.types';
+import { Alarm } from '@/types/alarm.types';
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; dot: string }> = {
   ACTIVE: { label: 'Aktif', className: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' },
@@ -20,16 +17,43 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; dot: str
   OFFLINE: { label: 'Çevrimdışı', className: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
 };
 
-const STATION_ALARMS = [
-  { id: 'a1', stationId: 'BSC-001', metricName: 'cpuUsage', severity: 'CRITICAL', status: 'OPEN', message: 'CPU %96 — kritik eşik aşıldı', createdAt: new Date().toISOString() },
-  { id: 'a2', stationId: 'BSC-001', metricName: 'latency', severity: 'WARNING', status: 'ACKNOWLEDGED', message: 'Gecikme 85ms — uyarı eşiği aşıldı', createdAt: new Date(Date.now() - 3600000).toISOString(), assignedTo: 'Ahmet Yılmaz' },
-  { id: 'a3', stationId: 'BSC-001', metricName: 'connectedUsers', severity: 'WARNING', status: 'RESOLVED', message: 'Bağlı kullanıcı sayısı düştü: 8 kişi', createdAt: new Date(Date.now() - 86400000).toISOString(), resolutionNote: 'Planlı bakım sonrası normale döndü.' },
-];
-
 export default function StationDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const stationId = id ?? 'BSC-001';
-  const station = MOCK_STATIONS[stationId] ?? MOCK_STATIONS['BSC-001'];
+  const [station, setStation] = useState<Station | null>(null);
+  const [alarms, setAlarms] = useState<Alarm[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    Promise.all([
+      stationsApi.getById(id).then((r) => r.data),
+      alarmsApi.getAll({ station: id }).then((r) => r.data ?? []),
+    ])
+      .then(([s, a]) => {
+        setStation(s);
+        setAlarms(a);
+        setError(null);
+      })
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Yükleniyor...</div>
+    );
+  }
+
+  if (error || !station) {
+    return (
+      <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        {error ?? 'İstasyon bulunamadı'}
+      </div>
+    );
+  }
+
   const statusCfg = STATUS_CONFIG[station.status] ?? STATUS_CONFIG['ACTIVE'];
 
   return (
@@ -73,7 +97,7 @@ export default function StationDetailPage() {
             <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
             <div>
               <p className="text-xs text-slate-500">Bölge</p>
-              <p className="font-medium">{station.region} / {station.city}</p>
+              <p className="font-medium">{station.region}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-700">
@@ -93,28 +117,14 @@ export default function StationDetailPage() {
           <div className="flex items-center gap-2 text-sm text-slate-700">
             <Clock className="h-4 w-4 text-slate-400 shrink-0" />
             <div>
-              <p className="text-xs text-slate-500">Son Veri</p>
-              <p className="font-medium">{station.lastSeen}</p>
+              <p className="text-xs text-slate-500">Koordinatlar</p>
+              <p className="font-medium font-mono text-xs">{parseFloat(station.latitude).toFixed(3)}, {parseFloat(station.longitude).toFixed(3)}</p>
             </div>
-          </div>
-        </div>
-
-        {/* Uptime bar */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-slate-500 font-medium">Uptime (Son 30 gün)</span>
-            <span className="font-bold text-emerald-700">{station.uptime}</span>
-          </div>
-          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-emerald-500 rounded-full"
-              style={{ width: station.uptime }}
-            />
           </div>
         </div>
       </div>
 
-      {/* Live Metric Charts — with threshold lines (PDF requirement) */}
+      {/* Live Metric Charts */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -132,14 +142,14 @@ export default function StationDetailPage() {
             </span>
           </div>
         </div>
-        <MetricChartsGrid />
+        <MetricChartsGrid stationId={station.id} />
       </div>
 
       {/* Alarm History */}
       <div>
         <h2 className="text-base font-semibold text-slate-900 mb-3">Bu İstasyona Ait Alarmlar</h2>
         <AlarmTable
-          data={STATION_ALARMS}
+          data={alarms}
           onRowClick={() => {}}
         />
       </div>

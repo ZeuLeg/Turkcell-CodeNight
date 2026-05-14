@@ -10,7 +10,10 @@ export const controlSimulator = async (req: Request, res: Response) => {
 
     const response = await fetch(`${SIMULATOR_URL}/${action}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-api-key': process.env.INTERNAL_API_KEY ?? 'telcoguard-internal-secret-change-me',
+      },
     });
 
     if (!response.ok) throw new Error(`Simulator ${action} failed`);
@@ -27,8 +30,11 @@ export const injectAnomaly = async (req: Request, res: Response) => {
     // req.body örnek: { stationId: 'uuid', anomalyType: 'CPU_SPIKE' }
     const response = await fetch(`${SIMULATOR_URL}/inject`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body)
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-api-key': process.env.INTERNAL_API_KEY ?? 'telcoguard-internal-secret-change-me',
+      },
+      body: JSON.stringify(req.body),
     });
 
     if (!response.ok) throw new Error('Anomaly injection failed');

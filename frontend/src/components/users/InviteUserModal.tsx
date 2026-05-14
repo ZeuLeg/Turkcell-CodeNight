@@ -13,7 +13,7 @@ interface InviteUserModalProps {
 
 export function InviteUserModal({ isOpen, onClose, onInvite }: InviteUserModalProps) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('user');
+  const [role, setRole] = useState('NOC');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -25,28 +25,28 @@ export function InviteUserModal({ isOpen, onClose, onInvite }: InviteUserModalPr
     setTimeout(() => {
       onInvite({ email, role });
       setEmail('');
-      setRole('user');
+      setRole('NOC');
       setIsLoading(false);
       onClose();
     }, 600);
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Yeni Kullanıcı Davet Et">
+    <Modal isOpen={isOpen} onClose={onClose} title="Yeni Kullanıcı Ekle">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="invite-email">E-posta Adresi</Label>
-          <Input 
-            id="invite-email" 
-            type="email" 
-            placeholder="ornek@turkcell.com.tr" 
+          <Input
+            id="invite-email"
+            type="email"
+            placeholder="ornek@turkcell.com.tr"
             icon={<Mail className="w-4 h-4" />}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
-        
+
         <div className="space-y-1.5">
           <Label htmlFor="invite-role">Kullanıcı Rolü</Label>
           <div className="relative">
@@ -57,19 +57,24 @@ export function InviteUserModal({ isOpen, onClose, onInvite }: InviteUserModalPr
               onChange={(e) => setRole(e.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <option value="user">Standart Kullanıcı (User)</option>
-              <option value="editor">Düzenleyici (Editor)</option>
-              <option value="admin">Sistem Yöneticisi (Admin)</option>
+              <option value="NOC">NOC Operatörü</option>
+              <option value="FIELD_ENGINEER">Saha Mühendisi</option>
+              <option value="MANAGER">Şebeke Yöneticisi</option>
+              <option value="ADMIN">Sistem Yöneticisi</option>
             </select>
           </div>
         </div>
+
+        <p className="text-xs text-slate-500 bg-slate-50 rounded-md px-3 py-2">
+          Varsayılan şifre: <span className="font-mono font-semibold">telco1234</span> — kullanıcı ilk girişte değiştirebilir.
+        </p>
 
         <div className="pt-4 flex justify-end space-x-2 border-t mt-6">
           <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
             İptal
           </Button>
           <Button type="submit" disabled={isLoading || !email}>
-            {isLoading ? 'Davet Gönderiliyor...' : 'Daveti Gönder'}
+            {isLoading ? 'Ekleniyor...' : 'Kullanıcı Ekle'}
           </Button>
         </div>
       </form>
