@@ -1,12 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, RadioTower, BellAlert, ActivitySquare, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, RadioTower, BellRing, ActivitySquare, Users, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'İstasyonlar', path: '/stations', icon: RadioTower },
-  { name: 'Alarmlar', path: '/alarms', icon: BellAlert },
+  { name: 'Alarmlar', path: '/alarms', icon: BellRing },
   { name: 'Simülatör', path: '/simulator', icon: ActivitySquare },
   { name: 'Kullanıcılar', path: '/users', icon: Users },
   { name: 'Ayarlar', path: '/settings', icon: Settings },
