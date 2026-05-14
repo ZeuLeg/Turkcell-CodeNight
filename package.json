@@ -1,0 +1,33 @@
+{
+  "name": "turkcell-codenight-dev",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/ZeuLeg/Turkcell-CodeNight#readme",
+  "bugs": {
+    "url": "https://github.com/ZeuLeg/Turkcell-CodeNight/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZeuLeg/Turkcell-CodeNight.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "eslint.config.js",
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=@telcoguard/backend",
+    "dev:simulator": "npm run dev --workspace=@telcoguard/simulator",
+    "dev:frontend": "npm run dev --workspace=@telcoguard/frontend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:simulator\" \"npm run dev:frontend\"",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
+  },
+  "devDependencies": {
+    "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "3.8.3"
+  },
+  "workspaces": [
+    "backend/*"
+  ]
+}
