@@ -20,7 +20,7 @@ export default function DashboardPage() {
         
         {/* Alarms take 1 column on large screens */}
         <div className="h-full">
-          <AlarmTable />
+          <AlarmTable data={[]} onRowClick={() => {}} />
         </div>
       </section>
     </div>

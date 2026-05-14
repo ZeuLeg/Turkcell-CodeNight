@@ -1,53 +1,108 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/Badge'; // need to create a simple badge or use div
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  ColumnDef
+} from '@tanstack/react-table';
 
-const mockAlarms = [
-  { id: 1, station: 'TR-ANK-01', metric: 'Sıcaklık', severity: 'critical', time: '10:45:22' },
-  { id: 2, station: 'TR-IST-02', metric: 'Sinyal Gücü', severity: 'warning', time: '10:42:10' },
-  { id: 3, station: 'TR-IZM-01', metric: 'Bağlantı', severity: 'offline', time: '10:30:05' },
-  { id: 4, station: 'TR-ANT-01', metric: 'Voltaj', severity: 'warning', time: '10:15:33' },
-  { id: 5, station: 'TR-IST-01', metric: 'Bant Genişliği', severity: 'warning', time: '09:55:12' },
-];
+interface AlarmTableProps {
+  data: any[];
+  onRowClick: (alarm: any) => void;
+}
 
-export function AlarmTable() {
+export const AlarmTable: React.FC<AlarmTableProps> = ({ data, onRowClick }) => {
+  const columns = React.useMemo<ColumnDef<any>[]>(
+    () => [
+      {
+        accessorKey: 'severity',
+        header: 'Şiddet',
+        cell: (info) => {
+          const val = info.getValue() as string;
+          return (
+            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${val === 'CRITICAL' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}`}>
+              {val === 'CRITICAL' ? 'Kritik' : 'Uyarı'}
+            </span>
+          );
+        }
+      },
+      {
+        accessorKey: 'stationId',
+        header: 'İstasyon ID',
+      },
+      {
+        accessorKey: 'metricName',
+        header: 'Metrik',
+      },
+      {
+        accessorKey: 'status',
+        header: 'Durum',
+        cell: (info) => {
+          const val = info.getValue() as string;
+          return (
+            <span className={`font-medium ${val === 'OPEN' ? 'text-red-600' : 'text-green-600'}`}>
+              {val === 'OPEN' ? 'Açık' : 'Çözüldü'}
+            </span>
+          );
+        }
+      },
+      {
+        accessorKey: 'createdAt',
+        header: 'Tarih',
+        cell: (info) => new Date(info.getValue() as string).toLocaleString()
+      }
+    ],
+    []
+  );
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
-    <div className="rounded-xl border bg-white shadow-sm overflow-hidden flex flex-col h-full">
-      <div className="border-b px-4 py-3 bg-slate-50 flex justify-between items-center">
-        <h3 className="font-semibold text-slate-800">Son Alarmlar</h3>
-        <span className="text-xs text-slate-500">Canlı</span>
-      </div>
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0">
-            <tr>
-              <th className="px-4 py-2">İstasyon</th>
-              <th className="px-4 py-2">Metrik</th>
-              <th className="px-4 py-2">Şiddet</th>
-              <th className="px-4 py-2 text-right">Zaman</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockAlarms.map((alarm) => (
-              <tr key={alarm.id} className="border-b last:border-0 hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium text-slate-900">{alarm.station}</td>
-                <td className="px-4 py-3 text-slate-600">{alarm.metric}</td>
-                <td className="px-4 py-3">
-                  <span className={cn(
-                    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                    alarm.severity === 'critical' ? 'bg-red-100 text-red-700' :
-                    alarm.severity === 'warning' ? 'bg-amber-100 text-amber-700' :
-                    'bg-slate-100 text-slate-700'
-                  )}>
-                    {alarm.severity}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right text-slate-500">{alarm.time}</td>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left text-gray-500">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b">
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <th key={header.id} className="px-6 py-3">
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </th>
+                ))}
               </tr>
             ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map(row => (
+              <tr 
+                key={row.id} 
+                onClick={() => onRowClick(row.original)}
+                className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-colors"
+              >
+                {row.getVisibleCells().map(cell => (
+                  <td key={cell.id} className="px-6 py-4">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {data.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  Kayıtlı alarm bulunmuyor veya filtrelere uyan sonuç yok.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
-}
+};
