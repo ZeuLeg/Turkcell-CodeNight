@@ -5,15 +5,19 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "gel": "^2.2.0",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0"
   },
   "devDependencies": {
