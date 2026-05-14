@@ -18,7 +18,7 @@ export const resolveAlarm = async (req: AuthRequest, res: Response) => {
         resolvedAt: new Date(),
         assignedTo: userId // Çözen kişiyi kaydet
       })
-      .where(eq(alarms.id, alarmId))
+      .where(eq(alarms.id, alarmId as string))
       .returning();
 
     if (!updatedAlarm.length) {
