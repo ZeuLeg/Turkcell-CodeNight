@@ -4,11 +4,9 @@ import { requireAuth, requireRole } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// Endpoint: PATCH /api/v1/alarms/:alarmId/resolve
-router.patch('/:alarmId/resolve', requireAuth, resolveAlarm);
+router.get('/', requireAuth, getAllAlarmsFiltered);
+router.patch('/:id/acknowledge', requireAuth, requireRole(['NOC', 'ADMIN']), acknowledgeAlarm);
+router.patch('/:id/assign', requireAuth, requireRole(['NOC', 'ADMIN']), assignAlarm);
+router.patch('/:id/resolve', requireAuth, requireRole(['NOC', 'FIELD_ENGINEER', 'ADMIN']), resolveAlarm);
 
 export default router;
-router.get('/', getAllAlarmsFiltered);
-router.patch('/:id/acknowledge', requireAuth, requireRole(['NOC']), acknowledgeAlarm);
-router.patch('/:id/assign', requireAuth, requireRole(['NOC']), assignAlarm);
-router.patch('/:id/resolve', requireAuth, requireRole(['NOC', 'FIELD_ENGINEER']), resolveAlarm); // For compatibility with :id

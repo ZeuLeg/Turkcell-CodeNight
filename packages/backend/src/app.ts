@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import simulatorRoutes from './routes/simulator.routes';
 import alarmsRoutes from './routes/alarms.routes';
+import usersRoutes from './routes/users.routes';
 
 export const createApp = (): Application => {
   const app = express();
@@ -13,8 +14,10 @@ export const createApp = (): Application => {
   // Middleware
   app.use(helmet()); // Güvenlik başlıkları (Bonus)
   app.use(cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Frontend URL
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   }));
   app.use(express.json());
 
@@ -24,9 +27,10 @@ export const createApp = (): Application => {
   app.use('/api/v1/dashboard', dashboardRoutes);
   app.use('/api/v1/simulator', simulatorRoutes);
   app.use('/api/v1/alarms', alarmsRoutes);
+  app.use('/api/v1/users', usersRoutes);
 
   // Health Check Endpoint (AWS/Docker deployment standartı)
-  app.get('/health', (req: Request, res: Response) => {
+  app.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({ status: 'OK', timestamp: new Date() });
   });
 

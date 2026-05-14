@@ -3,11 +3,9 @@ import { controlSimulator, injectAnomaly } from '../controllers/simulator.contro
 
 const router = Router();
 
-// Endpoint: POST /api/v1/simulator/start veya /stop
-router.post('/:action', controlSimulator);
-
-// Endpoint: POST /api/v1/simulator/inject
+// Specific routes must come before the dynamic /:action route
 router.post('/inject', injectAnomaly);
 router.post('/inject-anomaly', injectAnomaly);
+router.post('/:action', controlSimulator);
 
 export default router;

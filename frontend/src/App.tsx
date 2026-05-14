@@ -6,6 +6,7 @@ import { SimulatorPage } from './pages/SimulatorPage';
 import UsersPage from './pages/UsersPage';
 import StationDetailPage from './pages/StationDetailPage';
 import RegionSummaryPage from './pages/RegionSummaryPage';
+import MyTasksPage from './pages/MyTasksPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import StationsListPage from './pages/StationsListPage';
@@ -44,6 +45,13 @@ function App() {
         <Route path="/settings" element={
           <ProtectedRoute allowedRoles={['admin', 'manager']}>
             <AppLayout><div className="p-4 text-slate-500">Ayarlar sayfası yakında...</div></AppLayout>
+          </ProtectedRoute>
+        } />
+
+        {/* Field engineer routes */}
+        <Route path="/my-tasks" element={
+          <ProtectedRoute allowedRoles={['field_engineer']}>
+            <AppLayout><MyTasksPage /></AppLayout>
           </ProtectedRoute>
         } />
 

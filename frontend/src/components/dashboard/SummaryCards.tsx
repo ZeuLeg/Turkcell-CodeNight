@@ -1,56 +1,41 @@
-import { useState, useEffect } from 'react';
 import { RadioTower, AlertTriangle, AlertOctagon, WifiOff } from 'lucide-react';
 import { SummaryCard } from './SummaryCard';
+import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 
 export function SummaryCards() {
-  const [stats, setStats] = useState({
-    totalStations: 124,
-    activeAlarms: 18,
-    criticalAlarms: 3,
-    offlineStations: 2,
-  });
+  const { summary, loading } = useDashboardSummary(5000);
 
-  // Polling simulation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStats((prev) => ({
-        ...prev,
-        activeAlarms: prev.activeAlarms + (Math.random() > 0.7 ? 1 : Math.random() > 0.5 ? -1 : 0),
-        criticalAlarms: prev.criticalAlarms + (Math.random() > 0.9 ? 1 : Math.random() > 0.8 ? -1 : 0),
-      }));
-    }, 5000); // Every 5 seconds update
-
-    return () => clearInterval(interval);
-  }, []);
+  const totalStations    = summary?.totalStations    ?? 0;
+  const activeAlarms     = summary?.activeAlarms     ?? 0;
+  const criticalAlarms   = summary?.criticalAlarms   ?? 0;
+  const offlineStations  = summary?.offlineStations  ?? 0;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <SummaryCard
         title="Toplam İstasyon"
-        value={stats.totalStations}
+        value={loading ? '—' : totalStations}
         icon={RadioTower}
         colorClass="text-blue-600"
         bgClass="bg-blue-50"
       />
       <SummaryCard
         title="Aktif Alarmlar"
-        value={Math.max(0, stats.activeAlarms)}
+        value={loading ? '—' : activeAlarms}
         icon={AlertTriangle}
         colorClass="text-amber-600"
         bgClass="bg-amber-50"
-        trend={{ value: 12, isPositive: false }}
       />
       <SummaryCard
         title="Kritik Alarmlar"
-        value={Math.max(0, stats.criticalAlarms)}
+        value={loading ? '—' : criticalAlarms}
         icon={AlertOctagon}
         colorClass="text-red-600"
         bgClass="bg-red-50"
-        trend={{ value: 2, isPositive: false }}
       />
       <SummaryCard
         title="Çevrimdışı İstasyon"
-        value={stats.offlineStations}
+        value={loading ? '—' : offlineStations}
         icon={WifiOff}
         colorClass="text-slate-500"
         bgClass="bg-slate-100"
@@ -58,4 +43,3 @@ export function SummaryCards() {
     </div>
   );
 }
-

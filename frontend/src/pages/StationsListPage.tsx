@@ -3,24 +3,8 @@ import { Link } from 'react-router-dom';
 import { RadioTower, MapPin, AlertOctagon, AlertTriangle, WifiOff, CheckCircle2, ChevronRight, Search } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { cn } from '@/lib/utils';
-
-const STATIONS = [
-  { id: 'BSC-001', name: 'Levent-K1', region: 'Marmara', city: 'İstanbul', type: 'NR_5G', capacity: 1000, status: 'CRITICAL', alarms: 2, lat: 41.083, lng: 29.011 },
-  { id: 'BSC-002', name: 'Kadıköy-M3', region: 'Marmara', city: 'İstanbul', type: 'LTE', capacity: 800, status: 'WARNING', alarms: 1, lat: 40.990, lng: 29.028 },
-  { id: 'BSC-003', name: 'Taksim-A2', region: 'Marmara', city: 'İstanbul', type: 'NR_5G', capacity: 1200, status: 'ACTIVE', alarms: 0, lat: 41.036, lng: 28.985 },
-  { id: 'BSC-004', name: 'Beşiktaş-B1', region: 'Marmara', city: 'İstanbul', type: 'NR_5G', capacity: 900, status: 'ACTIVE', alarms: 0, lat: 41.043, lng: 29.004 },
-  { id: 'BSC-005', name: 'Üsküdar-U3', region: 'Marmara', city: 'İstanbul', type: 'LTE', capacity: 700, status: 'OFFLINE', alarms: 2, lat: 41.024, lng: 29.013 },
-  { id: 'BSC-006', name: 'Konak-K1', region: 'Ege', city: 'İzmir', type: 'NR_5G', capacity: 1000, status: 'ACTIVE', alarms: 0, lat: 38.418, lng: 27.129 },
-  { id: 'BSC-007', name: 'Bornova-B2', region: 'Ege', city: 'İzmir', type: 'LTE', capacity: 750, status: 'WARNING', alarms: 1, lat: 38.467, lng: 27.219 },
-  { id: 'BSC-008', name: 'Karşıyaka-K3', region: 'Ege', city: 'İzmir', type: 'NR_5G', capacity: 900, status: 'ACTIVE', alarms: 0, lat: 38.454, lng: 27.115 },
-  { id: 'BSC-009', name: 'Buca-B4', region: 'Ege', city: 'İzmir', type: 'LTE', capacity: 600, status: 'ACTIVE', alarms: 0, lat: 38.385, lng: 27.179 },
-  { id: 'BSC-010', name: 'Alsancak-A1', region: 'Ege', city: 'İzmir', type: 'NR_5G', capacity: 1100, status: 'ACTIVE', alarms: 0, lat: 38.442, lng: 27.142 },
-  { id: 'BSC-011', name: 'Kızılay-K1', region: 'İç Anadolu', city: 'Ankara', type: 'NR_5G', capacity: 1200, status: 'ACTIVE', alarms: 0, lat: 39.919, lng: 32.854 },
-  { id: 'BSC-012', name: 'Çankaya-C2', region: 'İç Anadolu', city: 'Ankara', type: 'NR_5G', capacity: 1000, status: 'ACTIVE', alarms: 0, lat: 39.905, lng: 32.862 },
-  { id: 'BSC-013', name: 'Etlik-E3', region: 'İç Anadolu', city: 'Ankara', type: 'LTE', capacity: 700, status: 'WARNING', alarms: 1, lat: 39.975, lng: 32.861 },
-  { id: 'BSC-014', name: 'Keçiören-K4', region: 'İç Anadolu', city: 'Ankara', type: 'LTE', capacity: 650, status: 'WARNING', alarms: 1, lat: 40.009, lng: 32.861 },
-  { id: 'BSC-015', name: 'Mamak-M5', region: 'İç Anadolu', city: 'Ankara', type: 'LTE', capacity: 600, status: 'ACTIVE', alarms: 0, lat: 39.934, lng: 32.893 },
-];
+import { useStations } from '@/hooks/useStations';
+import { StationStatus } from '@/types/station.types';
 
 const STATUS_CONFIG = {
   ACTIVE: { label: 'Aktif', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
@@ -29,29 +13,36 @@ const STATUS_CONFIG = {
   OFFLINE: { label: 'Çevrimdışı', icon: WifiOff, color: 'text-slate-500', bg: 'bg-slate-100', dot: 'bg-slate-400' },
 } as const;
 
-type StationStatus = keyof typeof STATUS_CONFIG;
-
 export default function StationsListPage() {
+  const { stations, loading, error } = useStations();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterRegion, setFilterRegion] = useState('');
 
-  const filtered = STATIONS.filter((s) => {
-    if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !s.id.toLowerCase().includes(search.toLowerCase())) return false;
+  const filtered = stations.filter((s) => {
+    if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !s.code.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterStatus && s.status !== filterStatus) return false;
     if (filterRegion && s.region !== filterRegion) return false;
     return true;
   });
 
   const byStatus = { ACTIVE: 0, WARNING: 0, CRITICAL: 0, OFFLINE: 0 };
-  STATIONS.forEach((s) => byStatus[s.status as StationStatus]++);
+  stations.forEach((s) => { if (s.status in byStatus) byStatus[s.status as StationStatus]++; });
+
+  const regions = [...new Set(stations.map((s) => s.region))].sort();
 
   return (
     <div className="flex flex-col space-y-6 h-full">
       <PageHeader
         title="İstasyonlar"
-        description={`Şebekedeki ${STATIONS.length} baz istasyonunun durumu ve anlık metrikleri`}
+        description={`Şebekedeki ${stations.length} baz istasyonunun durumu ve anlık metrikleri`}
       />
+
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          Veriler yüklenemedi: {error}
+        </div>
+      )}
 
       {/* Quick stats */}
       <div className="flex gap-3 flex-wrap">
@@ -96,79 +87,73 @@ export default function StationsListPage() {
           className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
         >
           <option value="">Tüm Bölgeler</option>
-          <option value="Marmara">Marmara</option>
-          <option value="Ege">Ege</option>
-          <option value="İç Anadolu">İç Anadolu</option>
+          {regions.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
 
       {/* Station table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              {['Durum', 'İstasyon', 'Bölge', 'Tür', 'Kapasite', 'Alarmlar', ''].map((h) => (
-                <th key={h} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filtered.map((station) => {
-              const cfg = STATUS_CONFIG[station.status as StationStatus];
-              return (
-                <tr key={station.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold', cfg.bg, cfg.color)}>
-                      <span className={cn('h-1.5 w-1.5 rounded-full', cfg.dot)} />
-                      {cfg.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-900">{station.name}</p>
-                    <p className="text-xs font-mono text-slate-500">{station.id}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 text-slate-600">
-                      <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                      <span>{station.region} / {station.city}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn(
-                      'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold',
-                      station.type === 'NR_5G' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'
-                    )}>
-                      {station.type === 'NR_5G' ? '5G' : '4G LTE'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 tabular-nums">
-                    {station.capacity.toLocaleString('tr-TR')}
-                  </td>
-                  <td className="px-4 py-3">
-                    {station.alarms > 0 ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full">
-                        <AlertTriangle className="h-3 w-3" />
-                        {station.alarms}
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-slate-400 text-sm">
+            Yükleniyor...
+          </div>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                {['Durum', 'İstasyon', 'Bölge', 'Tür', 'Kapasite', ''].map((h) => (
+                  <th key={h} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((station) => {
+                const cfg = STATUS_CONFIG[station.status as StationStatus] ?? STATUS_CONFIG.OFFLINE;
+                return (
+                  <tr key={station.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold', cfg.bg, cfg.color)}>
+                        <span className={cn('h-1.5 w-1.5 rounded-full', cfg.dot)} />
+                        {cfg.label}
                       </span>
-                    ) : (
-                      <span className="text-xs text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/stations/${station.id}`}
-                      className="inline-flex items-center text-xs text-primary hover:text-primary/80 font-medium gap-0.5 transition-colors"
-                    >
-                      Detay <ChevronRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-slate-900">{station.name}</p>
+                      <p className="text-xs font-mono text-slate-500">{station.code}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 text-slate-600">
+                        <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                        <span>{station.region}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn(
+                        'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold',
+                        station.type === 'NR_5G' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'
+                      )}>
+                        {station.type === 'NR_5G' ? '5G' : '4G LTE'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 tabular-nums">
+                      {station.capacity.toLocaleString('tr-TR')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        to={`/stations/${station.id}`}
+                        className="inline-flex items-center text-xs text-primary hover:text-primary/80 font-medium gap-0.5 transition-colors"
+                      >
+                        Detay <ChevronRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
 
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <RadioTower className="h-10 w-10 mb-3 opacity-30" />
             <p className="text-sm font-medium">İstasyon bulunamadı</p>
@@ -177,7 +162,7 @@ export default function StationsListPage() {
         )}
 
         <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 text-xs text-slate-500">
-          {filtered.length} / {STATIONS.length} istasyon gösteriliyor
+          {filtered.length} / {stations.length} istasyon gösteriliyor
         </div>
       </div>
     </div>

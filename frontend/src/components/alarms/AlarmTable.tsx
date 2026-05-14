@@ -64,11 +64,20 @@ export const AlarmTable: React.FC<AlarmTableProps> = ({ data, onRowClick, maxRow
         },
       },
       {
-        accessorKey: 'stationId',
+        id: 'station',
         header: 'İstasyon',
-        cell: (info) => (
-          <span className="font-mono text-sm font-medium text-slate-800">{info.getValue() as string}</span>
-        ),
+        cell: ({ row }) => {
+          const alarm = row.original;
+          const name = alarm.station?.name ?? alarm.station?.code;
+          return name
+            ? (
+              <div>
+                <p className="text-sm font-medium text-slate-800">{name}</p>
+                <p className="text-xs text-slate-400 font-mono">{alarm.station?.code}</p>
+              </div>
+            )
+            : <span className="font-mono text-xs text-slate-400">{(alarm.stationId as string).slice(0, 8)}…</span>;
+        },
       },
       {
         accessorKey: 'metricName',

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Zap } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-
-const STATIONS = ['BSC-001', 'BSC-002', 'BSC-003', 'BSC-004', 'BSC-005'];
+import { useStations } from '@/hooks/useStations';
 
 const ANOMALY_TYPES = [
   { value: 'CPU_SPIKE', label: 'CPU Spike', description: 'CPU %95+ — Kritik CPU alarmı' },
@@ -17,7 +16,8 @@ interface AnomalyInjectorProps {
 }
 
 export const AnomalyInjector: React.FC<AnomalyInjectorProps> = ({ onInject }) => {
-  const [stationId, setStationId] = useState(STATIONS[0]);
+  const { stations } = useStations();
+  const [stationId, setStationId] = useState('');
   const [type, setType] = useState(ANOMALY_TYPES[0].value);
   const [duration, setDuration] = useState(60);
 
@@ -25,7 +25,9 @@ export const AnomalyInjector: React.FC<AnomalyInjectorProps> = ({ onInject }) =>
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onInject({ stationId, type, duration });
+    const target = stationId || stations[0]?.id;
+    if (!target) return;
+    onInject({ stationId: target, type, duration });
   };
 
   return (
@@ -45,8 +47,9 @@ export const AnomalyInjector: React.FC<AnomalyInjectorProps> = ({ onInject }) =>
             onChange={(e) => setStationId(e.target.value)}
             className="w-full h-9 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           >
-            {STATIONS.map((st) => (
-              <option key={st} value={st}>{st}</option>
+            {stations.length === 0 && <option value="">Yükleniyor...</option>}
+            {stations.map((s) => (
+              <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
             ))}
           </select>
         </div>
@@ -88,7 +91,7 @@ export const AnomalyInjector: React.FC<AnomalyInjectorProps> = ({ onInject }) =>
           </div>
         </div>
 
-        <Button type="submit" className="w-full gap-2" variant="destructive">
+        <Button type="submit" className="w-full gap-2" variant="destructive" disabled={stations.length === 0}>
           <Zap className="h-4 w-4" />
           Anomali Başlat
         </Button>

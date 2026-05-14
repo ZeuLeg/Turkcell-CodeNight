@@ -1,11 +1,20 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Filter } from 'lucide-react';
+import { stationsApi } from '@/api/stations.api';
 
 interface AlarmFiltersProps {
   onFilterChange: (filters: any) => void;
 }
 
 export const AlarmFilters: React.FC<AlarmFiltersProps> = ({ onFilterChange }) => {
+  const [stations, setStations] = useState<{ id: string; code: string; name: string }[]>([]);
+
+  useEffect(() => {
+    stationsApi.getAll()
+      .then((res) => setStations((res.data ?? []).map(s => ({ id: s.id, code: s.code, name: s.name }))))
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -13,6 +22,7 @@ export const AlarmFilters: React.FC<AlarmFiltersProps> = ({ onFilterChange }) =>
         <span className="text-sm font-semibold text-slate-700">Filtreler</span>
       </div>
       <div className="flex flex-wrap gap-3 items-end">
+
         <div className="flex flex-col gap-1 min-w-[130px]">
           <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Şiddet</label>
           <select
@@ -39,16 +49,16 @@ export const AlarmFilters: React.FC<AlarmFiltersProps> = ({ onFilterChange }) =>
           </select>
         </div>
 
-        <div className="flex flex-col gap-1 min-w-[160px]">
+        <div className="flex flex-col gap-1 min-w-[200px]">
           <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">İstasyon</label>
           <select
             className="h-9 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
             onChange={(e) => onFilterChange({ stationId: e.target.value })}
           >
             <option value="">Tüm İstasyonlar</option>
-            <option value="BSC-001">BSC-001 Levent-K1</option>
-            <option value="BSC-002">BSC-002 Kadıköy-M3</option>
-            <option value="BSC-003">BSC-003 Taksim-A2</option>
+            {stations.map((s) => (
+              <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
+            ))}
           </select>
         </div>
 
@@ -69,6 +79,7 @@ export const AlarmFilters: React.FC<AlarmFiltersProps> = ({ onFilterChange }) =>
             onChange={(e) => onFilterChange({ endDate: e.target.value })}
           />
         </div>
+
       </div>
     </div>
   );

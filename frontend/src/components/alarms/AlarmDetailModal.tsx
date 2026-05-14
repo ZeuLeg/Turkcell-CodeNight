@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, AlertOctagon, AlertTriangle, Clock, User, CheckCircle2, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { api } from '@/api/client';
+import { ApiResponse } from '@/types/api.types';
+
+interface Engineer { id: string; email: string; }
 
 interface AlarmDetailModalProps {
   alarm: any;
@@ -11,41 +15,45 @@ interface AlarmDetailModalProps {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  OPEN: { label: 'Açık', className: 'bg-red-100 text-red-800' },
-  ACKNOWLEDGED: { label: 'Kabul Edildi', className: 'bg-amber-100 text-amber-800' },
-  IN_PROGRESS: { label: 'Müdahale Ediliyor', className: 'bg-blue-100 text-blue-800' },
-  RESOLVED: { label: 'Çözüldü', className: 'bg-emerald-100 text-emerald-800' },
+  OPEN:         { label: 'Açık',               className: 'bg-red-100 text-red-800' },
+  ACKNOWLEDGED: { label: 'Kabul Edildi',        className: 'bg-amber-100 text-amber-800' },
+  IN_PROGRESS:  { label: 'Müdahale Ediliyor',   className: 'bg-blue-100 text-blue-800' },
+  RESOLVED:     { label: 'Çözüldü',             className: 'bg-emerald-100 text-emerald-800' },
 };
 
 const METRIC_LABELS: Record<string, string> = {
-  cpuUsage: 'CPU Kullanımı',
-  memoryUsage: 'Bellek Kullanımı',
-  packetLoss: 'Paket Kaybı',
-  latency: 'Gecikme',
-  rssi: 'Sinyal Gücü (RSSI)',
-  connectedUsers: 'Bağlı Kullanıcı Sayısı',
+  cpuUsage:              'CPU Kullanımı',
+  memoryUsage:           'Bellek Kullanımı',
+  packetLoss:            'Paket Kaybı',
+  latency:               'Gecikme',
+  rssi:                  'Sinyal Gücü (RSSI)',
+  connectedUsers:        'Bağlı Kullanıcı Sayısı',
+  correlation_bottleneck:'Korelasyon: Darboğaz',
 };
 
-const MOCK_ENGINEERS = [
-  { id: 'eng1', name: 'Ahmet Yılmaz (Saha Mühendisi)' },
-  { id: 'eng2', name: 'Ayşe Demir (NOC Operatörü)' },
-  { id: 'eng3', name: 'Mehmet Çelik (Saha Mühendisi)' },
-];
+function nameFromEmail(email: string) {
+  return email.split('@')[0].split(/[._-]/).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+}
 
 export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({
-  alarm,
-  onClose,
-  onResolve,
-  onAcknowledge,
-  onStartProgress,
+  alarm, onClose, onResolve, onAcknowledge, onStartProgress,
 }) => {
   const [resolutionNote, setResolutionNote] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [engineers, setEngineers] = useState<Engineer[]>([]);
+
+  useEffect(() => {
+    if (!alarm) return;
+    api.get<ApiResponse<{ id: string; email: string; role: string }[]>>('/api/v1/users')
+      .then((res) => setEngineers((res.data ?? []).filter(u => u.role === 'FIELD_ENGINEER')))
+      .catch(() => { /* kullanıcılar yüklenemezse boş liste */ });
+  }, [alarm]);
 
   if (!alarm) return null;
 
   const statusCfg = STATUS_CONFIG[alarm.status] ?? { label: alarm.status, className: 'bg-slate-100 text-slate-700' };
   const SeverityIcon = alarm.severity === 'CRITICAL' ? AlertOctagon : AlertTriangle;
+  const stationLabel = alarm.station?.name ?? alarm.station?.code ?? alarm.stationId;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -55,15 +63,10 @@ export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <SeverityIcon
-              className={`h-5 w-5 ${alarm.severity === 'CRITICAL' ? 'text-red-600' : 'text-amber-500'}`}
-            />
+            <SeverityIcon className={`h-5 w-5 ${alarm.severity === 'CRITICAL' ? 'text-red-600' : 'text-amber-500'}`} />
             <h2 className="text-base font-semibold text-slate-900">Alarm Detayı</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-          >
+          <button onClick={onClose} className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -71,7 +74,6 @@ export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({
         {/* Body */}
         <div className="p-6 overflow-y-auto space-y-5">
 
-          {/* Status + Severity row */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusCfg.className}`}>
               {statusCfg.label}
@@ -81,17 +83,18 @@ export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({
             </span>
             {alarm.assignedTo && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
-                <User className="h-3 w-3" />
-                {alarm.assignedTo}
+                <User className="h-3 w-3" /> Atandı
               </span>
             )}
           </div>
 
-          {/* Details grid */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs font-medium text-slate-500 mb-1">İstasyon</p>
-              <p className="font-mono text-sm font-semibold text-slate-900">{alarm.stationId}</p>
+              <p className="text-sm font-semibold text-slate-900">{stationLabel}</p>
+              {alarm.station?.code && alarm.station.name && (
+                <p className="text-xs text-slate-400 font-mono">{alarm.station.code}</p>
+              )}
             </div>
             <div>
               <p className="text-xs font-medium text-slate-500 mb-1">Metrik</p>
@@ -101,13 +104,10 @@ export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({
               <p className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">
                 <Clock className="h-3 w-3" /> Oluşturma Zamanı
               </p>
-              <p className="text-sm text-slate-700">
-                {new Date(alarm.createdAt).toLocaleString('tr-TR')}
-              </p>
+              <p className="text-sm text-slate-700">{new Date(alarm.createdAt).toLocaleString('tr-TR')}</p>
             </div>
           </div>
 
-          {/* Message */}
           <div>
             <p className="text-xs font-medium text-slate-500 mb-2">Alarm Açıklaması</p>
             <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
@@ -115,7 +115,6 @@ export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Action area — depends on status */}
           {(alarm.status === 'OPEN' || alarm.status === 'ACKNOWLEDGED') && (
             <div>
               <p className="text-xs font-medium text-slate-500 mb-2">Saha Mühendisine Ata</p>
@@ -125,8 +124,8 @@ export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({
                 onChange={(e) => setAssignedTo(e.target.value)}
               >
                 <option value="">Kişi seçin...</option>
-                {MOCK_ENGINEERS.map((eng) => (
-                  <option key={eng.id} value={eng.name}>{eng.name}</option>
+                {engineers.map((eng) => (
+                  <option key={eng.id} value={eng.id}>{nameFromEmail(eng.email)}</option>
                 ))}
               </select>
             </div>
@@ -159,16 +158,14 @@ export const AlarmDetailModal: React.FC<AlarmDetailModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-200 flex justify-between items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Kapat
-          </Button>
+          <Button variant="outline" size="sm" onClick={onClose}>Kapat</Button>
           <div className="flex gap-2">
             {alarm.status === 'OPEN' && onAcknowledge && (
               <Button variant="secondary" size="sm" onClick={() => onAcknowledge(alarm.id)}>
                 Kabul Et
               </Button>
             )}
-            {alarm.status === 'ACKNOWLEDGED' && onStartProgress && (
+            {alarm.status === 'ACKNOWLEDGED' && onStartProgress && assignedTo && (
               <Button variant="secondary" size="sm" onClick={() => onStartProgress(alarm.id, assignedTo)}>
                 <Wrench className="h-3.5 w-3.5 mr-1.5" />
                 Müdahale Başlat

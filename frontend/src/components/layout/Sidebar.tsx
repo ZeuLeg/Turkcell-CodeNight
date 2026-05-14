@@ -1,10 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, RadioTower, BellRing, ActivitySquare, Users, Settings, Map } from 'lucide-react';
+import { LayoutDashboard, RadioTower, BellRing, ActivitySquare, Users, Settings, Map, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore, UserRole } from '@/store/auth.store';
-
-const ACTIVE_ALARM_COUNT = 5;
-const CRITICAL_ALARM_COUNT = 2;
+import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 
 interface NavItem {
   name: string;
@@ -13,13 +11,15 @@ interface NavItem {
   badge?: number;
   badgeCritical?: boolean;
   roles?: UserRole[];
+  excludeRoles?: UserRole[];
 }
 
-const navItems: NavItem[] = [
+const BASE_NAV: NavItem[] = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'İstasyonlar', path: '/stations', icon: RadioTower },
-  { name: 'Alarmlar', path: '/alarms', icon: BellRing, badge: ACTIVE_ALARM_COUNT, badgeCritical: CRITICAL_ALARM_COUNT > 0 },
-  { name: 'Bölge Özeti', path: '/regions', icon: Map },
+  { name: 'Alarmlar', path: '/alarms', icon: BellRing, excludeRoles: ['field_engineer'] },
+  { name: 'Görevlerim', path: '/my-tasks', icon: Wrench, roles: ['field_engineer'] },
+  { name: 'Bölge Özeti', path: '/regions', icon: Map, excludeRoles: ['field_engineer'] },
   { name: 'Simülatör', path: '/simulator', icon: ActivitySquare, roles: ['admin'] },
   { name: 'Kullanıcılar', path: '/users', icon: Users, roles: ['admin'] },
   { name: 'Ayarlar', path: '/settings', icon: Settings, roles: ['admin', 'manager'] },
@@ -28,10 +28,19 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const { user } = useAuthStore();
   const role = user?.role ?? 'operator';
+  const { summary } = useDashboardSummary(15000);
 
-  const visibleItems = navItems.filter(
-    (item) => !item.roles || item.roles.includes(role)
+  const navItems = BASE_NAV.map((item) =>
+    item.path === '/alarms'
+      ? { ...item, badge: summary?.activeAlarms ?? 0, badgeCritical: (summary?.criticalAlarms ?? 0) > 0 }
+      : item
   );
+
+  const visibleItems = navItems.filter((item) => {
+    if (item.roles && !item.roles.includes(role)) return false;
+    if (item.excludeRoles && item.excludeRoles.includes(role)) return false;
+    return true;
+  });
 
   return (
     <div className="flex h-full w-64 flex-col border-r border-slate-800 bg-slate-900 text-slate-100 shrink-0">

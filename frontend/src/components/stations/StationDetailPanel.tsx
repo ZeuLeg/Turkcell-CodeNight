@@ -6,30 +6,24 @@ import { MetricChartsGrid } from '../charts/MetricChartsGrid';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 
-// Mock data fetcher
-const getMockStation = (id: number) => ({
-  id,
-  name: `TR-IST-${String(id).padStart(2, '0')} (Maslak)`,
-  code: `BSC-${String(id).padStart(3, '0')}`,
-  region: 'İstanbul / Avrupa',
-  type: id % 2 === 0 ? '5G' : '4G LTE',
-  capacity: '75%',
-  status: id === 3 ? 'critical' : id === 2 ? 'warning' : id === 4 ? 'offline' : 'normal' as any,
-});
+import { stationsApi } from '@/api/stations.api';
+import { Station } from '@/types/station.types';
 
 interface StationDetailPanelProps {
-  stationId: number | null;
+  stationId: string | null;
   onClose: () => void;
 }
 
 export function StationDetailPanel({ stationId, onClose }: StationDetailPanelProps) {
-  const [station, setStation] = useState<any>(null);
+  const [station, setStation] = useState<Station | null>(null);
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     if (stationId !== null) {
       setIsClosing(false);
-      setStation(getMockStation(stationId));
+      stationsApi.getById(stationId)
+        .then((res) => setStation(res.data))
+        .catch(() => setStation(null));
     }
   }, [stationId]);
 
@@ -71,7 +65,14 @@ export function StationDetailPanel({ stationId, onClose }: StationDetailPanelPro
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           {station && (
             <>
-              <StationHeader station={station} />
+              <StationHeader station={{
+                name: station.name,
+                code: station.code,
+                region: station.region,
+                type: station.type,
+                capacity: `${station.capacity.toLocaleString('tr-TR')} kullanıcı`,
+                status: ({ ACTIVE: 'normal', WARNING: 'warning', CRITICAL: 'critical', OFFLINE: 'offline' } as const)[station.status] ?? 'normal',
+              }} />
               
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4">Canlı Metrikler</h3>

@@ -1,15 +1,11 @@
 import { Router } from 'express';
 import { db } from '../config/db';
 import { stations } from '../db/schema';
-import { eq } from 'drizzle-orm'; from 'express';
+import { eq } from 'drizzle-orm';
 import { insertMetric, getStationMetrics, getLatestMetric } from '../controllers/metrics.controller';
 
 const router = Router();
 
-// Yüksel'in simülatöründen gelen veriler buraya POST edilecek
-router.post('/:stationId/metrics', insertMetric);
-
-export default router;
 router.get('/', async (req, res) => {
   const allStations = await db.select().from(stations);
   res.json({ success: true, data: allStations });
@@ -20,5 +16,8 @@ router.get('/:id', async (req, res) => {
   res.json({ success: true, data: station });
 });
 
+router.post('/:stationId/metrics', insertMetric);
 router.get('/:stationId/metrics', getStationMetrics);
 router.get('/:stationId/metrics/latest', getLatestMetric);
+
+export default router;

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { useAuthStore, AuthUser } from '@/store/auth.store';
+import { useAuthStore, AuthUser, mapBackendRole } from '@/store/auth.store';
+import { authApi } from '@/api/auth.api';
 import {
   loginSchema,
   otpLoginSchema,
@@ -20,10 +21,15 @@ import {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, isMockMode } = useAuthStore();
+  const { login } = useAuthStore();
   const [activeTab, setActiveTab] = useState('login');
   const [loginMethod, setLoginMethod] = useState('email');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [showDemo, setShowDemo] = useState(false);
+  const [otpStep, setOtpStep] = useState<'phone' | 'code'>('phone');
+  const [otpPhone, setOtpPhone] = useState('');
+  const [otpHint, setOtpHint] = useState<string | null>(null);
 
   // Email Login Form
   const {
@@ -53,36 +59,85 @@ export default function LoginPage() {
   });
 
   const MOCK_USERS: Record<string, AuthUser> = {
-    admin: { id: 1, name: 'Ahmet Yılmaz', email: 'admin@turkcell.com.tr', role: 'admin', roleLabel: 'Sistem Yöneticisi' },
-    manager: { id: 2, name: 'Fatma Kaya', email: 'manager@turkcell.com.tr', role: 'manager', roleLabel: 'Şebeke Yöneticisi' },
-    operator: { id: 3, name: 'Mehmet Çelik', email: 'operator@turkcell.com.tr', role: 'operator', roleLabel: 'NOC Operatörü' },
+    admin: { id: 'mock-admin', name: 'Ahmet Yılmaz', email: 'admin@turkcell.com.tr', role: 'admin', roleLabel: 'Sistem Yöneticisi' },
+    manager: { id: 'mock-manager', name: 'Fatma Kaya', email: 'manager@turkcell.com.tr', role: 'manager', roleLabel: 'Şebeke Yöneticisi' },
+    operator: { id: 'mock-operator', name: 'Mehmet Çelik', email: 'operator@turkcell.com.tr', role: 'operator', roleLabel: 'NOC Operatörü' },
+    field_engineer: { id: 'mock-field', name: 'Ali Demir', email: 'saha@turkcell.com.tr', role: 'field_engineer', roleLabel: 'Saha Mühendisi' },
   };
 
-  const onLoginSuccess = () => {
+  const onEmailLogin = async (values: LoginFormValues) => {
     setIsLoading(true);
-    setTimeout(() => {
-      if (isMockMode) {
-        login('mock-jwt-token-12345', MOCK_USERS.admin);
-        navigate('/dashboard');
-      }
+    setLoginError(null);
+    try {
+      const res = await authApi.login(values.email, values.password);
+      const { role, roleLabel } = mapBackendRole(res.user.role);
+      const authUser: AuthUser = {
+        id: res.user.id,
+        name: res.user.email.split('@')[0],
+        email: res.user.email,
+        role,
+        roleLabel,
+      };
+      login(res.token, authUser);
+      navigate(role === 'field_engineer' ? '/my-tasks' : '/dashboard');
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Giriş başarısız');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
+
+  const onRequestOtp = async (values: OtpLoginFormValues) => {
+    setIsLoading(true);
+    setLoginError(null);
+    try {
+      const res = await authApi.requestOtp(values.phone);
+      setOtpPhone(values.phone);
+      setOtpStep('code');
+      if (res.otp) setOtpHint(res.otp);
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'OTP gönderilemedi');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onVerifyOtp = async (values: OtpLoginFormValues) => {
+    setIsLoading(true);
+    setLoginError(null);
+    try {
+      const res = await authApi.verifyOtp(otpPhone, values.otp);
+      const { role, roleLabel } = mapBackendRole(res.user.role);
+      const authUser: AuthUser = { id: res.user.id, name: res.user.email.split('@')[0], email: res.user.email, role, roleLabel };
+      login(res.token, authUser);
+      navigate(role === 'field_engineer' ? '/my-tasks' : '/dashboard');
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Doğrulama başarısız');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onOtpLogin = otpStep === 'phone' ? onRequestOtp : onVerifyOtp;
 
   const quickLogin = (roleKey: keyof typeof MOCK_USERS) => {
     const user = MOCK_USERS[roleKey];
     login(`mock-jwt-${roleKey}`, user);
-    navigate('/dashboard');
+    navigate(user.role === 'field_engineer' ? '/my-tasks' : '/dashboard');
   };
 
-  const onRegisterSuccess = () => {
+  const onRegisterSuccess = async (values: RegisterFormValues) => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      // After successful registration, switch to login tab
+    setLoginError(null);
+    try {
+      const backendRole = values.role === 'admin' ? 'ADMIN' : 'NOC';
+      await authApi.register(values.email, values.password, backendRole);
       setActiveTab('login');
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Kayıt başarısız');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -112,7 +167,7 @@ export default function LoginPage() {
                 </TabsList>
 
                 <TabsContent value="email">
-                  <form className="space-y-4" onSubmit={handleEmailSubmit(onLoginSuccess)}>
+                  <form className="space-y-4" onSubmit={handleEmailSubmit(onEmailLogin)}>
                     <div className="space-y-1">
                       <Label htmlFor="email">E-posta Adresi</Label>
                       <Input
@@ -139,6 +194,9 @@ export default function LoginPage() {
                         <p className="text-sm text-red-500">{emailErrors.password.message}</p>
                       )}
                     </div>
+                    {loginError && (
+                      <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{loginError}</p>
+                    )}
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
                       {!isLoading && <ArrowRight className="ml-2 w-4 h-4" />}
@@ -147,7 +205,7 @@ export default function LoginPage() {
                 </TabsContent>
 
                 <TabsContent value="gsm">
-                  <form className="space-y-4" onSubmit={handleOtpSubmit(onLoginSuccess)}>
+                  <form className="space-y-4" onSubmit={handleOtpSubmit(onOtpLogin)}>
                     <div className="space-y-1">
                       <Label htmlFor="phone">Telefon Numarası</Label>
                       <Input
@@ -155,28 +213,52 @@ export default function LoginPage() {
                         type="tel"
                         placeholder="5XX XXX XX XX"
                         icon={<Phone className="w-4 h-4" />}
+                        disabled={otpStep === 'code'}
                         {...registerOtp('phone')}
                       />
                       {otpErrors.phone && (
                         <p className="text-sm text-red-500">{otpErrors.phone.message}</p>
                       )}
                     </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="otp">Tek Kullanımlık Şifre (OTP)</Label>
-                      <Input
-                        id="otp"
-                        type="text"
-                        placeholder="123456"
-                        icon={<KeyRound className="w-4 h-4" />}
-                        {...registerOtp('otp')}
-                      />
-                      {otpErrors.otp && (
-                        <p className="text-sm text-red-500">{otpErrors.otp.message}</p>
-                      )}
-                    </div>
+
+                    {otpStep === 'code' && (
+                      <>
+                        {otpHint && (
+                          <p className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-md px-3 py-2">
+                            Demo OTP kodu: <span className="font-mono font-bold">{otpHint}</span>
+                          </p>
+                        )}
+                        <div className="space-y-1">
+                          <Label htmlFor="otp">Tek Kullanımlık Şifre (OTP)</Label>
+                          <Input
+                            id="otp"
+                            type="text"
+                            placeholder="6 haneli kod"
+                            icon={<KeyRound className="w-4 h-4" />}
+                            {...registerOtp('otp')}
+                          />
+                          {otpErrors.otp && (
+                            <p className="text-sm text-red-500">{otpErrors.otp.message}</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+
                     <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? 'Doğrulanıyor...' : 'Doğrula ve Giriş Yap'}
+                      {isLoading
+                        ? (otpStep === 'phone' ? 'Gönderiliyor...' : 'Doğrulanıyor...')
+                        : (otpStep === 'phone' ? 'OTP Gönder' : 'Doğrula ve Giriş Yap')}
                     </Button>
+
+                    {otpStep === 'code' && (
+                      <button
+                        type="button"
+                        onClick={() => { setOtpStep('phone'); setOtpHint(null); setLoginError(null); }}
+                        className="w-full text-xs text-slate-500 hover:text-slate-700 underline"
+                      >
+                        Farklı numara kullan
+                      </button>
+                    )}
                   </form>
                 </TabsContent>
               </Tabs>
@@ -184,6 +266,9 @@ export default function LoginPage() {
 
             <TabsContent value="register">
               <form className="space-y-4" onSubmit={handleRegisterSubmit(onRegisterSuccess)}>
+                {loginError && activeTab === 'register' && (
+                  <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{loginError}</p>
+                )}
                 <div className="space-y-1">
                   <Label htmlFor="name">Ad Soyad</Label>
                   <Input
@@ -244,9 +329,19 @@ export default function LoginPage() {
             </TabsContent>
           </Tabs>
 
-          {isMockMode && (
-            <div className="mt-6 border-t border-slate-200 pt-4 space-y-3">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Demo — Hızlı Giriş</p>
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setShowDemo((v) => !v)}
+              className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors"
+            >
+              {showDemo ? 'Demo panelini gizle' : 'Demo hesaplarıyla hızlı giriş'}
+            </button>
+          </div>
+
+          {showDemo && (
+            <div className="mt-3 border-t border-slate-200 pt-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Demo — Mock Hızlı Giriş</p>
               <button
                 type="button"
                 onClick={() => quickLogin('admin')}
@@ -279,6 +374,17 @@ export default function LoginPage() {
                   <p className="text-xs text-emerald-600 mt-0.5">Dashboard, Alarmlar, İstasyonlar</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-emerald-500 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => quickLogin('field_engineer')}
+                className="w-full flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-left hover:bg-orange-100 transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-orange-800">Saha Mühendisi</p>
+                  <p className="text-xs text-orange-600 mt-0.5">Görevlerim, Alarmlar, İstasyon Detayı</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-orange-500 shrink-0" />
               </button>
             </div>
           )}
