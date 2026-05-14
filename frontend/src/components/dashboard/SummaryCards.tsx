@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { RadioTower, AlertTriangle, AlertOctagon, WifiOff } from 'lucide-react';
 import { SummaryCard } from './SummaryCard';
 
@@ -54,3 +54,4 @@ export function SummaryCards() {
     </div>
   );
 }
+

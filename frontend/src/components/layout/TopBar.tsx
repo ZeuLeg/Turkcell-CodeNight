@@ -1,4 +1,3 @@
-import React from 'react';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/auth.store';
@@ -38,3 +37,4 @@ export function TopBar() {
     </header>
   );
 }
+

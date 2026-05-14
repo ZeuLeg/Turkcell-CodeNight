@@ -1,4 +1,3 @@
-import React from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge'; // need to create a simple badge or use div
 
@@ -51,3 +50,4 @@ export function AlarmTable() {
     </div>
   );
 }
+
