@@ -1,4 +1,3 @@
-import React from 'react';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
 
@@ -36,3 +35,4 @@ export function SummaryCard({ title, value, icon: Icon, trend, colorClass = "tex
     </div>
   );
 }
+

@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, RadioTower, BellRing, ActivitySquare, Users, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -43,3 +42,4 @@ export function Sidebar() {
     </div>
   );
 }
+

@@ -1,4 +1,3 @@
-import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -49,12 +48,16 @@ const getMarkerIcon = (status: string) => {
   });
 };
 
-export function StationMap() {
+interface StationMapProps {
+  onSelectStation?: (id: number) => void;
+}
+
+export function StationMap({ onSelectStation }: StationMapProps) {
   return (
     <div className="h-full w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm relative z-0">
-      <MapContainer 
+      <MapContainer
         center={[39.9208, 35.8541]} // Center of Turkey roughly
-        zoom={6} 
+        zoom={6}
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
@@ -62,18 +65,26 @@ export function StationMap() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {stations.map(station => (
-          <Marker 
-            key={station.id} 
+          <Marker
+            key={station.id}
             position={[station.lat, station.lng]}
             icon={getMarkerIcon(station.status)}
           >
             <Popup>
-              <div className="p-1">
-                <h3 className="font-bold text-slate-800">{station.name}</h3>
-                <div className="mt-2 text-sm text-slate-600">
-                  <p><span className="font-semibold">Durum:</span> <span className="uppercase">{station.status}</span></p>
-                  <p><span className="font-semibold">Sinyal Gücü:</span> {station.signal}</p>
+              <div className="p-1 min-w-[150px]">
+                <h3 className="font-bold text-slate-800 border-b pb-1 mb-2">{station.name}</h3>
+                <div className="text-sm text-slate-600 space-y-1">
+                  <p className="flex justify-between"><span className="font-semibold">Durum:</span> <span className="uppercase">{station.status}</span></p>
+                  <p className="flex justify-between"><span className="font-semibold">Sinyal:</span> {station.signal}</p>
                 </div>
+                {onSelectStation && (
+                  <button
+                    onClick={() => onSelectStation(station.id)}
+                    className="mt-3 w-full bg-primary text-white text-xs font-semibold py-1.5 rounded hover:bg-primary/90 transition-colors"
+                  >
+                    Detayları Görüntüle
+                  </button>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -82,3 +93,4 @@ export function StationMap() {
     </div>
   );
 }
+
