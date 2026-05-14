@@ -4,6 +4,7 @@ import { BackendUser } from '@/types/user.types';
 interface LoginResponse {
   success: boolean;
   token: string;
+  refreshToken: string;
   user: BackendUser;
 }
 

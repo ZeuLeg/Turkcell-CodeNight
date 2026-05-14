@@ -7,6 +7,7 @@ import dashboardRoutes from './routes/dashboard.routes';
 import simulatorRoutes from './routes/simulator.routes';
 import alarmsRoutes from './routes/alarms.routes';
 import usersRoutes from './routes/users.routes';
+import { globalErrorHandler } from './middleware/error.middleware';
 
 export const createApp = (): Application => {
   const app = express();
@@ -33,6 +34,9 @@ export const createApp = (): Application => {
   app.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({ status: 'OK', timestamp: new Date() });
   });
+
+  // Global error handler — must be registered after all routes
+  app.use(globalErrorHandler);
 
   return app;
 };

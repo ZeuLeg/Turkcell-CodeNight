@@ -78,7 +78,7 @@ export default function LoginPage() {
         role,
         roleLabel,
       };
-      login(res.token, authUser);
+      login(res.token, authUser, res.refreshToken);
       navigate(role === 'field_engineer' ? '/my-tasks' : '/dashboard');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Giriş başarısız');
@@ -109,7 +109,7 @@ export default function LoginPage() {
       const res = await authApi.verifyOtp(otpPhone, values.otp);
       const { role, roleLabel } = mapBackendRole(res.user.role);
       const authUser: AuthUser = { id: res.user.id, name: res.user.email.split('@')[0], email: res.user.email, role, roleLabel };
-      login(res.token, authUser);
+      login(res.token, authUser, res.refreshToken);
       navigate(role === 'field_engineer' ? '/my-tasks' : '/dashboard');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Doğrulama başarısız');

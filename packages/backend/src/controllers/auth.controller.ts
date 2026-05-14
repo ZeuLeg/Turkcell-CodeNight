@@ -5,7 +5,14 @@ import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'telcoguard-super-secret-key';
+const JWT_SECRET         = process.env.JWT_SECRET          || 'telcoguard-super-secret-key';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET  || 'telcoguard-refresh-secret-key';
+
+function signTokens(userId: string, role: string) {
+  const accessToken  = jwt.sign({ id: userId, role }, JWT_SECRET,         { expiresIn: '12h' });
+  const refreshToken = jwt.sign({ id: userId, role }, JWT_REFRESH_SECRET, { expiresIn: '7d'  });
+  return { accessToken, refreshToken };
+}
 
 // In-memory OTP store (simülasyon — üretimde Redis kullanılır)
 const otpStore = new Map<string, { code: string; expiresAt: number }>();
@@ -20,8 +27,13 @@ export const login = async (req: Request, res: Response) => {
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) return res.status(401).json({ success: false, message: 'Geçersiz kimlik bilgileri' });
 
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '12h' });
-    res.status(200).json({ success: true, token, user: { id: user.id, email: user.email, role: user.role } });
+    const { accessToken, refreshToken } = signTokens(user.id, user.role);
+    res.status(200).json({
+      success: true,
+      token: accessToken,
+      refreshToken,
+      user: { id: user.id, email: user.email, role: user.role },
+    });
   } catch (error) {
     console.error('[Auth] Login Error:', error);
     res.status(500).json({ success: false, message: 'Sunucu hatası' });
@@ -33,10 +45,24 @@ export const register = async (req: Request, res: Response) => {
     const { email, password, role } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await db.insert(users).values({ email, passwordHash: hashedPassword, role: role || 'NOC' }).returning();
-    const token = jwt.sign({ id: newUser[0].id, role: newUser[0].role }, JWT_SECRET, { expiresIn: '12h' });
-    res.status(201).json({ success: true, token, data: newUser[0] });
+    const { accessToken, refreshToken } = signTokens(newUser[0].id, newUser[0].role);
+    res.status(201).json({ success: true, token: accessToken, refreshToken, data: newUser[0] });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Kayıt başarısız' });
+  }
+};
+
+// POST /api/v1/auth/refresh
+export const refreshAccessToken = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.status(400).json({ success: false, message: 'Refresh token gerekli' });
+
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as { id: string; role: string };
+    const { accessToken, refreshToken: newRefreshToken } = signTokens(decoded.id, decoded.role);
+    res.json({ success: true, token: accessToken, refreshToken: newRefreshToken });
+  } catch {
+    res.status(401).json({ success: false, message: 'Geçersiz veya süresi dolmuş refresh token' });
   }
 };
 
@@ -75,6 +101,6 @@ export const verifyOtp = async (req: Request, res: Response) => {
   const demoUser = await db.query.users.findFirst({ where: eq(users.email, 'noc@telcoguard.com') });
   if (!demoUser) return res.status(500).json({ success: false, message: 'Demo kullanıcı bulunamadı' });
 
-  const token = jwt.sign({ id: demoUser.id, role: demoUser.role }, JWT_SECRET, { expiresIn: '12h' });
-  res.json({ success: true, token, user: { id: demoUser.id, email: demoUser.email, role: demoUser.role } });
+  const { accessToken, refreshToken } = signTokens(demoUser.id, demoUser.role);
+  res.json({ success: true, token: accessToken, refreshToken, user: { id: demoUser.id, email: demoUser.email, role: demoUser.role } });
 };

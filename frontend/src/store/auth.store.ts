@@ -31,7 +31,7 @@ interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isMockMode: boolean;
-  login: (token: string, user: AuthUser) => void;
+  login: (token: string, user: AuthUser, refreshToken?: string) => void;
   logout: () => void;
   setMockMode: (mockMode: boolean) => void;
 }
@@ -43,13 +43,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   })(),
   isAuthenticated: !!localStorage.getItem('token'),
   isMockMode: false,
-  login: (token: string, user: AuthUser) => {
+  login: (token: string, user: AuthUser, refreshToken?: string) => {
     localStorage.setItem('token', token);
     localStorage.setItem('auth_user', JSON.stringify(user));
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
     set({ token, isAuthenticated: true, user });
   },
   logout: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('auth_user');
     set({ token: null, isAuthenticated: false, user: null });
   },
