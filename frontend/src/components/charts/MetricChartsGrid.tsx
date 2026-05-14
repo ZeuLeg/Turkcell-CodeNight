@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MetricChart } from './MetricChart';
 import { stationsApi } from '@/api/stations.api';
+import { Metric } from '@/types/station.types';
 
 const generateInitialData = (baseValue: number, variance: number, count = 20, min = 0, max = 100) =>
   Array.from({ length: count }).map((_, i) => ({
@@ -9,14 +10,32 @@ const generateInitialData = (baseValue: number, variance: number, count = 20, mi
   }));
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
-const now = () => new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const nowStr = () => new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+type ChartPoint = { time: string; value: number };
+type ChartData = { cpu: ChartPoint[]; memory: ChartPoint[]; packetLoss: ChartPoint[]; latency: ChartPoint[]; rssi: ChartPoint[]; users: ChartPoint[] };
+
+function buildFromHistory(history: Metric[]): ChartData {
+  const sorted = [...history].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).slice(-20);
+  const toPoints = (fn: (m: Metric) => number): ChartPoint[] =>
+    sorted.map(m => ({ time: fmtTime(m.timestamp), value: round1(fn(m)) }));
+  return {
+    cpu:        toPoints(m => parseFloat(m.cpuUsage)),
+    memory:     toPoints(m => parseFloat(m.memoryUsage)),
+    packetLoss: toPoints(m => parseFloat(m.packetLoss)),
+    latency:    toPoints(m => parseFloat(m.latency)),
+    rssi:       toPoints(m => parseFloat(m.rssi)),
+    users:      toPoints(m => m.connectedUsers),
+  };
+}
 
 interface Props {
   stationId?: string;
 }
 
 export function MetricChartsGrid({ stationId }: Props) {
-  const [data, setData] = useState({
+  const [data, setData] = useState<ChartData>({
     cpu:        generateInitialData(38,   8,  20,   0,  100),
     memory:     generateInitialData(55,   5,  20,   0,  100),
     packetLoss: generateInitialData(1.2,  0.8, 20,  0,   15),
@@ -30,8 +49,8 @@ export function MetricChartsGrid({ stationId }: Props) {
       // Simulated mode (dashboard)
       const interval = setInterval(() => {
         setData((prev) => {
-          const t = now();
-          const shift = (arr: { time: string; value: number }[], variance: number, min: number, max: number) => {
+          const t = nowStr();
+          const shift = (arr: ChartPoint[], variance: number, min: number, max: number) => {
             const last = arr[arr.length - 1].value;
             const next = Math.min(max, Math.max(min, last + (Math.random() * variance * 2 - variance)));
             return [...arr.slice(1), { time: t, value: round1(next) }];
@@ -49,13 +68,17 @@ export function MetricChartsGrid({ stationId }: Props) {
       return () => clearInterval(interval);
     }
 
-    // Real metrics mode (station detail)
-    const fetchMetrics = () => {
+    // Real metrics mode (station detail): load history first, then poll for new points
+    stationsApi.getMetrics(stationId)
+      .then((res) => { if (res.data?.length) setData(buildFromHistory(res.data)); })
+      .catch(() => {});
+
+    const fetchLatest = () => {
       stationsApi.getLatestMetric(stationId).then((res) => {
         const m = res.data;
         if (!m) return;
-        const t = now();
-        const push = (arr: { time: string; value: number }[], val: number) => [...arr.slice(1), { time: t, value: round1(val) }];
+        const t = fmtTime(m.timestamp);
+        const push = (arr: ChartPoint[], val: number) => [...arr.slice(1), { time: t, value: round1(val) }];
         setData((prev) => ({
           cpu:        push(prev.cpu,        parseFloat(m.cpuUsage)),
           memory:     push(prev.memory,     parseFloat(m.memoryUsage)),
@@ -64,11 +87,11 @@ export function MetricChartsGrid({ stationId }: Props) {
           rssi:       push(prev.rssi,       parseFloat(m.rssi)),
           users:      push(prev.users,      m.connectedUsers),
         }));
-      }).catch(() => { /* keep previous data on error */ });
+      }).catch(() => {});
     };
 
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 5000);
+    fetchLatest();
+    const interval = setInterval(fetchLatest, 5000);
     return () => clearInterval(interval);
   }, [stationId]);
 
