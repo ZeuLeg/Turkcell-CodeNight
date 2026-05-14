@@ -6,6 +6,8 @@ export const checkAnomalies = async (metric: any) => {
   try {
     // 1. Veritabanından aktif eşik değerlerini çek
     const thresholds = await db.select().from(thresholdConfigs).where(eq(thresholdConfigs.isActive, 1));
+    
+    const detectedAnomalies: { metric: string, severity: string, value: number }[] = [];
 
     for (const config of thresholds) {
       const { metricName, warningThreshold, criticalThreshold, direction } = config;
@@ -38,6 +40,9 @@ export const checkAnomalies = async (metric: any) => {
       // 3. Alarm Üretimi ve 5 Dakika Kuralı
       if (isAnomaly && severity) {
         const actualMetricName = metricName.startsWith('connectedUsers') ? 'connectedUsers' : metricName;
+        
+        detectedAnomalies.push({ metric: actualMetricName, severity, value: currentValue });
+
         const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
 
         // Son 5 dk içinde AÇIK alarm var mı?
@@ -64,6 +69,32 @@ export const checkAnomalies = async (metric: any) => {
             .set({ severity: 'CRITICAL', message: `Durum Kötüleşti: ${actualMetricName} = ${currentValue}` })
             .where(eq(alarms.id, existingAlarm.id));
         }
+      }
+    }
+
+    // 4. Korelasyon Algoritması (Bonus)
+    const hasCpuAnomaly = detectedAnomalies.find(a => a.metric === 'cpuUsage');
+    const hasLatencyAnomaly = detectedAnomalies.find(a => a.metric === 'latency');
+
+    if (hasCpuAnomaly && hasLatencyAnomaly) {
+      const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const existingCorrelation = await db.query.alarms.findFirst({
+        where: and(
+          eq(alarms.stationId, metric.stationId),
+          eq(alarms.metricName, 'correlation_bottleneck'),
+          eq(alarms.status, 'OPEN'),
+          gte(alarms.createdAt, fiveMinsAgo)
+        )
+      });
+
+      if (!existingCorrelation) {
+        await db.insert(alarms).values({
+          stationId: metric.stationId,
+          metricName: 'correlation_bottleneck',
+          severity: 'CRITICAL',
+          message: `KORELASYON: Darboğaz! CPU (${hasCpuAnomaly.value}) ve Gecikme (${hasLatencyAnomaly.value}ms) yüksek.`,
+        });
+        console.log(`🚨 KORELASYON ALARMI: İstasyon ${metric.stationId} | Darboğaz Tespit Edildi!`);
       }
     }
   } catch (error) {
