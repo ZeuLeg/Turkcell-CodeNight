@@ -40,7 +40,7 @@ export const insertMetric = async (req: Request, res: Response) => {
     }).returning();
 
     if (newMetric[0]) {
-      checkAnomalies(newMetric[0]);
+      await checkAnomalies(newMetric[0]);
     }
 
     res.status(201).json({ success: true, data: newMetric[0] });
@@ -51,7 +51,6 @@ export const insertMetric = async (req: Request, res: Response) => {
 };
 export const getStationMetrics = async (req: Request, res: Response) => {
   const stationId = req.params.stationId as string;
-  const { from, to } = req.query;
   const metricsData = await db.query.metrics.findMany({
     where: eq(metrics.stationId, stationId),
     orderBy: (metrics, { desc }) => [desc(metrics.timestamp)],

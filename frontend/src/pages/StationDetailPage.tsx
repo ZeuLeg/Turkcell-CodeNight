@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronRight, MapPin, RadioTower, HardDrive, Clock, Activity } from 'lucide-react';
 import { MetricChartsGrid } from '@/components/charts/MetricChartsGrid';
@@ -11,10 +11,10 @@ import { Station } from '@/types/station.types';
 import { Alarm } from '@/types/alarm.types';
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; dot: string }> = {
-  ACTIVE: { label: 'Aktif', className: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' },
-  WARNING: { label: 'Uyarı', className: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-400' },
-  CRITICAL: { label: 'Kritik', className: 'bg-red-100 text-red-800 border-red-200', dot: 'bg-red-500 animate-pulse' },
-  OFFLINE: { label: 'Çevrimdışı', className: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
+  ACTIVE:   { label: 'Aktif',        className: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' },
+  WARNING:  { label: 'Uyarı',        className: 'bg-amber-100 text-amber-800 border-amber-200',   dot: 'bg-amber-400' },
+  CRITICAL: { label: 'Kritik',       className: 'bg-red-100 text-red-800 border-red-200',         dot: 'bg-red-500 animate-pulse' },
+  OFFLINE:  { label: 'Çevrimdışı',   className: 'bg-slate-100 text-slate-600 border-slate-200',   dot: 'bg-slate-400' },
 };
 
 export default function StationDetailPage() {
@@ -24,21 +24,34 @@ export default function StationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!id) return;
-    setLoading(true);
-    Promise.all([
-      stationsApi.getById(id).then((r) => r.data),
-      alarmsApi.getAll({ station: id }).then((r) => r.data ?? []),
-    ])
-      .then(([s, a]) => {
-        setStation(s);
-        setAlarms(a);
-        setError(null);
-      })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+    if (isInitial) setLoading(true);
+    try {
+      const [s, a] = await Promise.all([
+        stationsApi.getById(id).then((r) => r.data),
+        alarmsApi.getAll({ station: id }).then((r) => r.data ?? []),
+      ]);
+      setStation(s);
+      setAlarms(a);
+      setError(null);
+    } catch (err: unknown) {
+      if (isInitial) setError(err instanceof Error ? err.message : 'Hata');
+    } finally {
+      if (isInitial) setLoading(false);
+    }
   }, [id]);
+
+  // İlk yükleme
+  useEffect(() => {
+    fetchData(true);
+  }, [fetchData]);
+
+  // Canlı alarm + istasyon durumu: 6 saniyede bir yenile
+  useEffect(() => {
+    const id = setInterval(() => fetchData(false), 6000);
+    return () => clearInterval(id);
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -57,7 +70,7 @@ export default function StationDetailPage() {
   const statusCfg = STATUS_CONFIG[station.status] ?? STATUS_CONFIG['ACTIVE'];
 
   return (
-    <div className="flex flex-col space-y-6 h-full">
+    <div className="flex flex-col space-y-6">
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-1 text-sm text-slate-500">
@@ -147,7 +160,12 @@ export default function StationDetailPage() {
 
       {/* Alarm History */}
       <div>
-        <h2 className="text-base font-semibold text-slate-900 mb-3">Bu İstasyona Ait Alarmlar</h2>
+        <h2 className="text-base font-semibold text-slate-900 mb-3">
+          Bu İstasyona Ait Alarmlar
+          {alarms.length > 0 && (
+            <span className="ml-2 text-xs font-normal text-slate-400">({alarms.length} alarm)</span>
+          )}
+        </h2>
         <AlarmTable
           data={alarms}
           onRowClick={() => {}}

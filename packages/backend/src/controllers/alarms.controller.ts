@@ -41,7 +41,7 @@ export const acknowledgeAlarm = async (req: AuthRequest, res: Response) => {
 export const assignAlarm = async (req: AuthRequest, res: Response) => {
   try {
     const updated = await db.update(alarms)
-      .set({ status: 'IN_PROGRESS', assignedTo: req.body.assigned_to })
+      .set({ status: 'IN_PROGRESS', assignedTo: req.body.assignedTo })
       .where(eq(alarms.id, req.params.id as string))
       .returning();
     res.json({ success: true, data: updated[0] });
