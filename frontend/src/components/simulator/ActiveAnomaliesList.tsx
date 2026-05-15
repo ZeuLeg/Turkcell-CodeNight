@@ -1,32 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, Clock } from 'lucide-react';
-
-export interface ActiveAnomaly {
-  id: string;
-  stationId: string;
-  type: string;
-  endTime: number;
-}
+import { Activity, Clock, RadioTower } from 'lucide-react';
+import { ActiveAnomaly } from '@/store/simulator.store';
 
 interface ActiveAnomaliesListProps {
   anomalies: ActiveAnomaly[];
 }
 
-const ANOMALY_LABELS: Record<string, string> = {
-  CPU_SPIKE: 'CPU Spike',
-  USER_DROP: 'Kullanıcı Düşüşü',
-  LATENCY_BURST: 'Gecikme Patlaması',
-  PACKET_STORM: 'Paket Fırtınası',
-  STATION_DOWN: 'İstasyon Çöküşü',
+const ANOMALY_LABELS: Record<string, { label: string; color: string }> = {
+  CPU_SPIKE:     { label: 'CPU Spike',          color: 'text-red-700 bg-red-50 border-red-200' },
+  USER_DROP:     { label: 'Kullanıcı Düşüşü',   color: 'text-orange-700 bg-orange-50 border-orange-200' },
+  LATENCY_BURST: { label: 'Gecikme Patlaması',   color: 'text-amber-700 bg-amber-50 border-amber-200' },
+  PACKET_STORM:  { label: 'Paket Fırtınası',     color: 'text-purple-700 bg-purple-50 border-purple-200' },
+  STATION_DOWN:  { label: 'İstasyon Çöküşü',     color: 'text-slate-700 bg-slate-100 border-slate-300' },
 };
 
 export const ActiveAnomaliesList: React.FC<ActiveAnomaliesListProps> = ({ anomalies }) => {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
+    if (anomalies.length === 0) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [anomalies.length]);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
@@ -34,7 +29,7 @@ export const ActiveAnomaliesList: React.FC<ActiveAnomaliesListProps> = ({ anomal
         <Activity className="h-4 w-4 text-red-500" />
         Aktif Anomaliler
         {anomalies.length > 0 && (
-          <span className="ml-auto inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-500 text-white text-xs font-bold">
+          <span className="ml-auto inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-500 text-white text-xs font-bold animate-pulse">
             {anomalies.length}
           </span>
         )}
@@ -50,32 +45,33 @@ export const ActiveAnomaliesList: React.FC<ActiveAnomaliesListProps> = ({ anomal
         <ul className="space-y-2.5">
           {anomalies.map((anomaly) => {
             const remaining = Math.max(0, Math.ceil((anomaly.endTime - now) / 1000));
-            const totalDuration = Math.ceil((anomaly.endTime - (anomaly.endTime - remaining * 1000 - 100)) / 1000);
-            const pct = Math.max(0, remaining / (totalDuration || 1));
+            const total = Math.max(1, (anomaly.endTime - anomaly.startTime) / 1000);
+            const pct = Math.max(0, (remaining / total) * 100);
+            const cfg = ANOMALY_LABELS[anomaly.type] ?? { label: anomaly.type, color: 'text-slate-700 bg-slate-100 border-slate-300' };
 
             return (
-              <li
-                key={anomaly.id}
-                className="rounded-lg border border-red-200 bg-red-50 p-3.5"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-sm font-semibold text-red-900">
-                      {ANOMALY_LABELS[anomaly.type] ?? anomaly.type}
-                    </p>
-                    <p className="text-xs text-red-600 font-mono">{anomaly.stationId}</p>
+              <li key={anomaly.id} className={`rounded-lg border p-3.5 ${cfg.color}`}>
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{cfg.label}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <RadioTower className="h-3 w-3 shrink-0 opacity-60" />
+                      <p className="text-xs font-medium truncate opacity-80">
+                        {anomaly.stationName ?? anomaly.stationId}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold tabular-nums text-red-700">{remaining}s</p>
-                    <p className="text-xs text-red-500 flex items-center justify-end gap-0.5">
+                  <div className="text-right shrink-0">
+                    <p className="text-xl font-bold tabular-nums">{remaining}s</p>
+                    <p className="text-xs opacity-60 flex items-center justify-end gap-0.5">
                       <Clock className="h-3 w-3" /> kalan
                     </p>
                   </div>
                 </div>
-                <div className="h-1.5 w-full bg-red-200 rounded-full overflow-hidden">
+                <div className="h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-red-500 rounded-full transition-all duration-1000"
-                    style={{ width: `${pct * 100}%` }}
+                    className="h-full bg-current rounded-full transition-all duration-1000 opacity-60"
+                    style={{ width: `${pct}%` }}
                   />
                 </div>
               </li>

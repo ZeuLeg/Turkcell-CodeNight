@@ -1,14 +1,36 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SimulatorControls } from '../components/simulator/SimulatorControls';
 import { AnomalyInjector } from '../components/simulator/AnomalyInjector';
-import { ActiveAnomaliesList, ActiveAnomaly } from '../components/simulator/ActiveAnomaliesList';
+import { ActiveAnomaliesList } from '../components/simulator/ActiveAnomaliesList';
 import { PageHeader } from '../components/ui/PageHeader';
 import { simulatorApi, AnomalyType } from '@/api/simulator.api';
+import { useSimulatorStore, ActiveAnomaly } from '@/store/simulator.store';
+import { useStations } from '@/hooks/useStations';
 
 export const SimulatorPage: React.FC = () => {
-  const [isRunning, setIsRunning] = useState(false);
-  const [activeAnomalies, setActiveAnomalies] = useState<ActiveAnomaly[]>([]);
+  const { isRunning, setRunning, activeAnomalies, addAnomaly, removeAnomaly, pruneExpired } =
+    useSimulatorStore();
+  const { stations } = useStations();
   const [error, setError] = useState<string | null>(null);
+
+  // Sayfa açılınca süresi dolmuş anomalileri temizle + backend durum senkronizasyonu
+  useEffect(() => {
+    pruneExpired();
+    simulatorApi.getStatus()
+      .then((res) => setRunning(res.data?.running ?? false))
+      .catch(() => { /* backend kapalıysa mevcut store değerini koru */ });
+  }, []);
+
+  // Store'daki her aktif anomali için bitiş zamanına göre otomatik silme zamanlayıcısı
+  useEffect(() => {
+    const timers = activeAnomalies
+      .filter((a) => a.endTime > Date.now())
+      .map((a) => {
+        const remaining = a.endTime - Date.now();
+        return window.setTimeout(() => removeAnomaly(a.id), remaining);
+      });
+    return () => timers.forEach(clearTimeout);
+  }, []); // Yalnızca mount'ta çalışır — yeni anomaliler handleInjectAnomaly'de ayrıca zamanlanır
 
   const handleToggleSimulator = async () => {
     setError(null);
@@ -18,7 +40,7 @@ export const SimulatorPage: React.FC = () => {
       } else {
         await simulatorApi.start();
       }
-      setIsRunning((prev) => !prev);
+      setRunning(!isRunning);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Simülatör kontrolü başarısız');
     }
@@ -33,16 +55,19 @@ export const SimulatorPage: React.FC = () => {
         duration_seconds: anomaly.duration,
       });
 
+      const station = stations.find((s) => s.id === anomaly.stationId);
+      const now = Date.now();
       const newAnomaly: ActiveAnomaly = {
         id: Math.random().toString(36).substring(7),
         stationId: anomaly.stationId,
+        stationName: station?.name ?? anomaly.stationId,
         type: anomaly.type,
-        endTime: Date.now() + anomaly.duration * 1000,
+        startTime: now,
+        endTime: now + anomaly.duration * 1000,
       };
-      setActiveAnomalies((prev) => [...prev, newAnomaly]);
-      setTimeout(() => {
-        setActiveAnomalies((prev) => prev.filter((a) => a.id !== newAnomaly.id));
-      }, anomaly.duration * 1000);
+      addAnomaly(newAnomaly);
+      // Süre dolunca store'dan sil
+      window.setTimeout(() => removeAnomaly(newAnomaly.id), anomaly.duration * 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Anomali enjekte edilemedi');
     }

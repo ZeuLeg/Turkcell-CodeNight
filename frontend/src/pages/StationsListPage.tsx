@@ -32,7 +32,7 @@ export default function StationsListPage() {
   const regions = [...new Set(stations.map((s) => s.region))].sort();
 
   return (
-    <div className="flex flex-col space-y-6 h-full">
+    <div className="flex flex-col space-y-6">
       <PageHeader
         title="İstasyonlar"
         description={`Şebekedeki ${stations.length} baz istasyonunun durumu ve anlık metrikleri`}

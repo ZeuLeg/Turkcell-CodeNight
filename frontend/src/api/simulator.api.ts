@@ -11,6 +11,7 @@ export interface InjectAnomalyPayload {
 }
 
 export const simulatorApi = {
+  getStatus: () => api.get<ApiResponse<{ running: boolean }>>('/api/v1/simulator/status'),
   start: () => api.post<ApiResponse<null>>('/api/v1/simulator/start', {}),
   stop:  () => api.post<ApiResponse<null>>('/api/v1/simulator/stop', {}),
   injectAnomaly: (payload: InjectAnomalyPayload) =>
