@@ -14,9 +14,13 @@ export default function DashboardPage() {
   const [recentAlarms, setRecentAlarms] = useState<Alarm[]>([]);
 
   useEffect(() => {
-    dashboardApi.getRecentAlarms()
-      .then((res) => setRecentAlarms(res.data ?? []))
-      .catch(() => { /* keep empty */ });
+    const load = () =>
+      dashboardApi.getRecentAlarms()
+        .then((res) => setRecentAlarms(res.data ?? []))
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
   }, []);
 
   const criticalOpen = recentAlarms.filter((a) => a.severity === 'CRITICAL' && a.status === 'OPEN');

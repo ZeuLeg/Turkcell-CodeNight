@@ -33,9 +33,13 @@ export function StationMap({ onSelectStation }: StationMapProps) {
   const [stations, setStations] = useState<Station[]>([]);
 
   useEffect(() => {
-    dashboardApi.getStations()
-      .then((res) => setStations(res.data ?? []))
-      .catch(() => { /* keep empty */ });
+    const load = () =>
+      dashboardApi.getStations()
+        .then((res) => setStations(res.data ?? []))
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
   }, []);
 
   return (

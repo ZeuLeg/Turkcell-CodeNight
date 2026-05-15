@@ -22,7 +22,7 @@ export const alarmsApi = {
     api.patch<ApiResponse<Alarm>>(`/api/v1/alarms/${id}/acknowledge`),
 
   assign: (id: string, assignedTo: string) =>
-    api.patch<ApiResponse<Alarm>>(`/api/v1/alarms/${id}/assign`, { assigned_to: assignedTo }),
+    api.patch<ApiResponse<Alarm>>(`/api/v1/alarms/${id}/assign`, { assignedTo }),
 
   resolve: (id: string, resolutionNote: string) =>
     api.patch<ApiResponse<Alarm>>(`/api/v1/alarms/${id}/resolve`, { resolutionNote }),

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { alarmsApi } from '@/api/alarms.api';
 import { Alarm } from '@/types/alarm.types';
 
@@ -8,25 +8,34 @@ interface AlarmFilters {
   station?: string;
 }
 
-export function useAlarms(filters?: AlarmFilters) {
+export function useAlarms(filters?: AlarmFilters, pollMs = 8000) {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isFirstFetch = useRef(true);
 
-  const fetchAlarms = useCallback(() => {
-    setLoading(true);
+  const doFetch = useCallback(() => {
+    if (isFirstFetch.current) setLoading(true);
     alarmsApi.getAll(filters)
       .then((res) => {
         setAlarms(res.data ?? []);
         setError(null);
+        setLoading(false);
+        isFirstFetch.current = false;
       })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: Error) => {
+        setError(err.message);
+        setLoading(false);
+        isFirstFetch.current = false;
+      });
   }, [filters?.severity, filters?.status, filters?.station]);
 
   useEffect(() => {
-    fetchAlarms();
-  }, [fetchAlarms]);
+    isFirstFetch.current = true;
+    doFetch();
+    const id = setInterval(doFetch, pollMs);
+    return () => clearInterval(id);
+  }, [doFetch, pollMs]);
 
   const acknowledge = async (id: string) => {
     const res = await alarmsApi.acknowledge(id);
@@ -43,5 +52,5 @@ export function useAlarms(filters?: AlarmFilters) {
     setAlarms((prev) => prev.map((a) => (a.id === id ? res.data : a)));
   };
 
-  return { alarms, loading, error, refetch: fetchAlarms, acknowledge, assign, resolve };
+  return { alarms, loading, error, refetch: doFetch, acknowledge, assign, resolve };
 }
