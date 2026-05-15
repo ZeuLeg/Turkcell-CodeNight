@@ -18,32 +18,6 @@ Telekomünikasyon ağlarında (özellikle 5G ve yoğun LTE altyapılarında) ya�
 - **Güvenlik:** JWT Tabanlı Rol (NOC, Engineer) yönetimi, Helmet, CORS
 - **Test:** Vitest (Integration + Unit)
 
-### 🏗 Mimari Diyagram (Architecture Diagram)
-
-```mermaid
-graph TD
-subgraph Veri Üretimi
-Sim[Simülatör Servisi\nNode.js]
-end
-
-subgraph Çekirdek Sistem
-API[Backend API\nExpress.js + TypeScript]
-Engine[Anomali Tespit Motoru\nAsenkron Servis]
-DB[(PostgreSQL\nDrizzle ORM)]
-end
-
-subgraph Kullanıcı Etkileşimi
-UI[Frontend Dashboard\nReact 19 + Zustand]
-end
-
-Sim -->|Gerçek Zamanlı Telemetri\n(CPU, RAM, Gecikme)| API
-API -->|Veri Kaydı & Okuma| DB
-DB -.->|Dinamik Eşik Kuralları| Engine
-API -->|Tetikleme (Fire-and-Forget)| Engine
-UI <-->|REST API & JWT Auth\nDashboard Verisi| API
-Engine -->|Kritik Alarm Üretimi| DB
-```
-
 ## ⚙️ Temel Modüller ve Özellikler
 Sistem, telekomünikasyon operasyonlarının uçtan uca yönetilebilmesi için dört ana modül üzerine inşa edilmiştir:
 
