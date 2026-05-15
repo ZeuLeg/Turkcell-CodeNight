@@ -2,7 +2,7 @@ import { and, eq, gte, desc } from 'drizzle-orm';
 import { db } from '../../config/db';
 import { alarms, thresholdConfigs, stations, metrics } from '../../db/schema';
 
-// Son N ölçümden Z-Score hesapla: |z|>2 WARNING, |z|>3 CRITICAL
+// Son N ölçümden Z-Score hesapla: |z|>2.5 WARNING, |z|>3.5 CRITICAL
 const Z_SCORE_WINDOW = 20;
 const Z_METRICS = ['cpuUsage', 'memoryUsage', 'packetLoss', 'latency', 'connectedUsers'] as const;
 type ZMetric = typeof Z_METRICS[number];
@@ -34,8 +34,8 @@ async function checkZScore(
     if (isNaN(current)) continue;
 
     const z = Math.abs((current - mean) / std);
-    if (z > 3) results.push({ metric: key, severity: 'CRITICAL', z });
-    else if (z > 2) results.push({ metric: key, severity: 'WARNING', z });
+    if (z > 3.5) results.push({ metric: key, severity: 'CRITICAL', z });
+    else if (z > 2.5) results.push({ metric: key, severity: 'WARNING', z });
   }
 
   return results;
@@ -47,7 +47,7 @@ async function insertAlarmIfNew(
   severity: 'WARNING' | 'CRITICAL',
   message: string
 ): Promise<void> {
-  const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+  const fiveMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
   const existing = await db.query.alarms.findFirst({
     where: and(
       eq(alarms.stationId, stationId),

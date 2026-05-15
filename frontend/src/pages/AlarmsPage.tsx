@@ -38,7 +38,7 @@ export const AlarmsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col space-y-6 h-full">
+    <div className="flex flex-col space-y-6">
       <PageHeader
         title="Alarm Yönetimi"
         description="İstasyonlardan gelen kritik ve uyarı seviyesindeki anomalileri takip edin."

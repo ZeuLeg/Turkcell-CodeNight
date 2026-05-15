@@ -13,7 +13,7 @@ async function runTick(): Promise<void> {
   await Promise.all(
     stations.map(async (station) => {
       let metric = generateNormalMetric();
-      const anomaly = getActiveAnomaly(station.id);
+      const anomaly = getActiveAnomaly(station.code);
       if (anomaly) {
         metric = applyAnomaly(anomaly, metric);
       }
